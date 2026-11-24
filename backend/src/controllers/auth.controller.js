@@ -2,6 +2,7 @@ import bcrypt from 'bcryptjs';
 import { query } from '../config/db.js';
 import { AppError } from '../utils/AppError.js';
 import { signAccessToken } from '../utils/jwt.js';
+import { buildVerificationSummary } from '../utils/trustScore.js';
 import { buildWhatsAppLinks } from '../utils/whatsapp.js';
 
 const BCRYPT_ROUNDS = 12;
@@ -22,6 +23,12 @@ const DUMMY_PASSWORD_HASH =
  * @param {Array<Record<string, any>>} reviews
  */
 function formatOwnedWorkerProfile(row, samples, reviews) {
+  const avgRating =
+    row.avg_rating !== null && row.avg_rating !== undefined
+      ? Number(row.avg_rating)
+      : null;
+  const reviewCount = Number(row.review_count ?? reviews.length);
+
   return {
     slug: row.slug,
     full_name: row.full_name,
@@ -33,11 +40,9 @@ function formatOwnedWorkerProfile(row, samples, reviews) {
     instagram_handle: row.instagram_handle ?? null,
     avatar_url: row.avatar_url ?? null,
     is_verified: Boolean(row.is_verified),
-    avg_rating:
-      row.avg_rating !== null && row.avg_rating !== undefined
-        ? Number(row.avg_rating)
-        : null,
-    review_count: Number(row.review_count ?? 0),
+    avg_rating: avgRating,
+    review_count: reviewCount,
+    verification: buildVerificationSummary(row, samples.length, reviewCount, avgRating),
     work_samples: samples.map((sample) => ({
       image_url: sample.image_url,
       caption: sample.caption,
@@ -187,6 +192,7 @@ export function createAuthController(deps = {}) {
       `
       SELECT
         w.id,
+        w.user_id,
         w.slug,
         w.full_name,
         w.trade,

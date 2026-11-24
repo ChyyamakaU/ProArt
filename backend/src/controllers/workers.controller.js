@@ -3,6 +3,7 @@ import { env } from '../config/env.js';
 import { cleanupUploadedFile, verifyAndSaveImage } from '../middleware/upload.js';
 import { AppError } from '../utils/AppError.js';
 import { generateWorkerSlug } from '../utils/slug.js';
+import { buildVerificationSummary } from '../utils/trustScore.js';
 import { buildWhatsAppLinks } from '../utils/whatsapp.js';
 
 const MAX_SLUG_RETRIES = 5;
@@ -59,7 +60,8 @@ function toPublicReview(review) {
 }
 
 /**
- * Maps a raw worker row to a public, PII-minimized Trust Card DTO.
+ * Maps a raw worker row to a public, PII-minimized Trust Card DTO including
+ * the computed `verification` breakdown.
  * Never exposes internal database IDs, `user_id`, `password_hash`, or raw phone fields.
  *
  * @param {Record<string, any>} row
@@ -78,6 +80,12 @@ function toPublicWorker(row, extras = {}) {
       ? row.reviews.map(toPublicReview)
       : [];
 
+  const avgRating =
+    row.avg_rating !== null && row.avg_rating !== undefined
+      ? Number(row.avg_rating)
+      : null;
+  const reviewCount = Number(row.review_count ?? reviews.length);
+
   return {
     slug: row.slug,
     full_name: row.full_name,
@@ -89,11 +97,14 @@ function toPublicWorker(row, extras = {}) {
     instagram_handle: row.instagram_handle ?? null,
     avatar_url: row.avatar_url ?? null,
     is_verified: Boolean(row.is_verified),
-    avg_rating:
-      row.avg_rating !== null && row.avg_rating !== undefined
-        ? Number(row.avg_rating)
-        : null,
-    review_count: Number(row.review_count ?? reviews.length),
+    avg_rating: avgRating,
+    review_count: reviewCount,
+    verification: buildVerificationSummary(
+      row,
+      workSamples.length,
+      reviewCount,
+      avgRating,
+    ),
     work_samples: workSamples,
     reviews,
     whatsapp_links: buildWhatsAppLinks({
@@ -145,6 +156,59 @@ export function createWorkersController(deps = {}) {
   const uploadDir = deps.uploadDir ?? env.UPLOAD_DIR;
 
   /**
+   * Hydrates a worker row with its live review aggregates, work samples,
+   * public reviews, and recalculated `verification` object.
+   *
+   * @param {Record<string, any>} workerRow
+   */
+  async function hydrateWorker(workerRow) {
+    const [statsResult, samplesResult, reviewsResult] = await Promise.all([
+      dbQuery(
+        `
+        SELECT
+          COUNT(*)::int AS review_count,
+          ROUND(AVG(rating)::numeric, 2) AS avg_rating
+        FROM reviews
+        WHERE worker_id = $1
+        `,
+        [workerRow.id],
+      ),
+      dbQuery(
+        `
+        SELECT image_url, caption, created_at
+        FROM work_samples
+        WHERE worker_id = $1
+        ORDER BY created_at DESC
+        `,
+        [workerRow.id],
+      ),
+      dbQuery(
+        `
+        SELECT client_name, job_description, rating, comment, created_at
+        FROM reviews
+        WHERE worker_id = $1
+        ORDER BY created_at DESC
+        `,
+        [workerRow.id],
+      ),
+    ]);
+
+    const stats = statsResult.rows[0] ?? { review_count: 0, avg_rating: null };
+
+    return toPublicWorker(
+      {
+        ...workerRow,
+        review_count: stats.review_count,
+        avg_rating: stats.avg_rating,
+      },
+      {
+        workSamples: samplesResult.rows,
+        reviews: reviewsResult.rows,
+      },
+    );
+  }
+
+  /**
    * GET /api/health
    * Verifies live PostgreSQL connectivity without exposing internals.
    *
@@ -168,14 +232,74 @@ export function createWorkersController(deps = {}) {
   }
 
   /**
-   * GET /api/workers
-   * Parameterized search and filtering by `trade`, `location`, and free-text `q`,
-   * with bounded pagination (`limit`, `offset`) and complete public Trust Card fields.
+   * GET /api/meta/filters (Public)
+   * Returns distinct platform trades, locations, and live hero metrics for
+   * dynamic frontend filter dropdowns and trust counters.
+   *
+   * @type {import('express').RequestHandler}
+   */
+  async function getMetaFilters(_req, res) {
+    const [tradesResult, locationsResult, workerStatsResult, reviewStatsResult] =
+      await Promise.all([
+        dbQuery(
+          `
+          SELECT DISTINCT trade
+          FROM workers
+          WHERE trade IS NOT NULL AND TRIM(trade) <> ''
+          ORDER BY trade ASC
+          `,
+        ),
+        dbQuery(
+          `
+          SELECT DISTINCT location
+          FROM workers
+          WHERE location IS NOT NULL AND TRIM(location) <> ''
+          ORDER BY location ASC
+          `,
+        ),
+        dbQuery(
+          `
+          SELECT
+            COUNT(*)::int AS total_workers,
+            COUNT(*) FILTER (WHERE is_verified = TRUE)::int AS verified_workers
+          FROM workers
+          `,
+        ),
+        dbQuery(
+          `
+          SELECT COUNT(*)::int AS total_reviews
+          FROM reviews
+          `,
+        ),
+      ]);
+
+    const workerStats = workerStatsResult.rows[0] ?? {
+      total_workers: 0,
+      verified_workers: 0,
+    };
+    const reviewStats = reviewStatsResult.rows[0] ?? { total_reviews: 0 };
+
+    res.status(200).json({
+      trades: tradesResult.rows.map((row) => row.trade),
+      locations: locationsResult.rows.map((row) => row.location),
+      stats: {
+        total_workers: Number(workerStats.total_workers ?? 0),
+        verified_workers: Number(workerStats.verified_workers ?? 0),
+        total_reviews: Number(reviewStats.total_reviews ?? 0),
+      },
+    });
+  }
+
+  /**
+   * GET /api/workers (Public)
+   * Parameterized search and filtering by `trade`, `location`, `q`, and
+   * `verified_only`, with bounded pagination (`limit`, `offset`) and complete
+   * public Trust Card fields including `verification`.
    *
    * @type {import('express').RequestHandler}
    */
   async function listWorkers(req, res) {
-    const { trade, location, q, limit, offset } = req.validated.query;
+    const { trade, location, q, verified_only, limit, offset } = req.validated.query;
 
     const whereClauses = [];
     const filterParams = [];
@@ -198,6 +322,10 @@ export function createWorkersController(deps = {}) {
       );
     }
 
+    if (verified_only === true) {
+      whereClauses.push('w.is_verified = TRUE');
+    }
+
     const whereSql = whereClauses.length > 0 ? `WHERE ${whereClauses.join(' AND ')}` : '';
 
     const countSql = `
@@ -211,6 +339,7 @@ export function createWorkersController(deps = {}) {
 
     const listSql = `
       SELECT
+        w.user_id,
         w.slug,
         w.full_name,
         w.trade,
@@ -289,9 +418,10 @@ export function createWorkersController(deps = {}) {
   }
 
   /**
-   * GET /api/workers/:slug
+   * GET /api/workers/:slug (Public)
    * Returns the full public Trust Card profile with aggregated ratings,
-   * verified work samples, PII-minimized public reviews, and WhatsApp links.
+   * dynamic verification breakdown, verified work samples, PII-minimized
+   * public reviews, and WhatsApp links.
    *
    * @type {import('express').RequestHandler}
    */
@@ -302,6 +432,7 @@ export function createWorkersController(deps = {}) {
       `
       SELECT
         w.id,
+        w.user_id,
         w.slug,
         w.full_name,
         w.trade,
@@ -417,6 +548,7 @@ export function createWorkersController(deps = {}) {
           )
           VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10)
           RETURNING
+            user_id,
             slug,
             full_name,
             trade,
@@ -513,6 +645,7 @@ export function createWorkersController(deps = {}) {
       WHERE id = $${idParamIndex}
       RETURNING
         id,
+        user_id,
         slug,
         full_name,
         trade,
@@ -529,53 +662,143 @@ export function createWorkersController(deps = {}) {
       params,
     );
 
-    const updated = updateResult.rows[0];
-
-    const [statsResult, samplesResult, reviewsResult] = await Promise.all([
-      dbQuery(
-        `
-        SELECT
-          COUNT(*)::int AS review_count,
-          ROUND(AVG(rating)::numeric, 2) AS avg_rating
-        FROM reviews
-        WHERE worker_id = $1
-        `,
-        [updated.id],
-      ),
-      dbQuery(
-        `
-        SELECT image_url, caption, created_at
-        FROM work_samples
-        WHERE worker_id = $1
-        ORDER BY created_at DESC
-        `,
-        [updated.id],
-      ),
-      dbQuery(
-        `
-        SELECT client_name, job_description, rating, comment, created_at
-        FROM reviews
-        WHERE worker_id = $1
-        ORDER BY created_at DESC
-        `,
-        [updated.id],
-      ),
-    ]);
-
-    const stats = statsResult.rows[0] ?? { review_count: 0, avg_rating: null };
+    const hydrated = await hydrateWorker(updateResult.rows[0]);
 
     res.status(200).json({
-      data: toPublicWorker(
-        {
-          ...updated,
-          review_count: stats.review_count,
-          avg_rating: stats.avg_rating,
-        },
-        {
-          workSamples: samplesResult.rows,
-          reviews: reviewsResult.rows,
-        },
-      ),
+      data: hydrated,
+    });
+  }
+
+  /**
+   * POST /api/workers/:slug/avatar (Protected by requireAuth)
+   * Verifies profile ownership (or admin role), checks image magic bytes, saves
+   * under a randomized UUID filename, updates `workers.avatar_url`, and returns
+   * `{ avatar_url, worker }` with the recalculated verification breakdown.
+   *
+   * @type {import('express').RequestHandler}
+   */
+  async function uploadAvatar(req, res) {
+    const { slug } = req.validated.params;
+
+    const workerResult = await dbQuery(
+      'SELECT id, user_id FROM workers WHERE slug = $1 LIMIT 1',
+      [slug],
+    );
+    const worker = workerResult.rows[0];
+
+    if (!worker) {
+      throw new AppError(404, 'Worker profile not found.', 'WORKER_NOT_FOUND');
+    }
+
+    assertWorkerOwnership(worker, req.user);
+
+    const savedFile = await verifyAndSaveImage(req.file, uploadDir);
+
+    try {
+      const updateResult = await dbQuery(
+        `
+        UPDATE workers
+        SET avatar_url = $1
+        WHERE id = $2
+        RETURNING
+          id,
+          user_id,
+          slug,
+          full_name,
+          trade,
+          location,
+          phone,
+          bio,
+          years_experience,
+          guild_endorsement,
+          instagram_handle,
+          avatar_url,
+          is_verified,
+          created_at
+        `,
+        [savedFile.imageUrl, worker.id],
+      );
+
+      const hydrated = await hydrateWorker(updateResult.rows[0]);
+
+      res.status(200).json({
+        avatar_url: savedFile.imageUrl,
+        worker: hydrated,
+      });
+    } catch (err) {
+      await cleanupUploadedFile(savedFile.absolutePath);
+      throw err;
+    }
+  }
+
+  /**
+   * PATCH /api/workers/:slug/verify (Protected by requireAuth + Admin role)
+   * Updates field verification status and optional guild endorsement, returning
+   * the updated Trust Card with its recalculated `verification` object.
+   *
+   * @type {import('express').RequestHandler}
+   */
+  async function verifyWorker(req, res) {
+    if (req.user.role !== 'admin') {
+      throw new AppError(
+        403,
+        'Admin privileges are required to update worker verification status.',
+        'FORBIDDEN',
+      );
+    }
+
+    const { slug } = req.validated.params;
+    const { is_verified, guild_endorsement } = req.validated.body;
+
+    const existingResult = await dbQuery(
+      'SELECT id FROM workers WHERE slug = $1 LIMIT 1',
+      [slug],
+    );
+    const worker = existingResult.rows[0];
+
+    if (!worker) {
+      throw new AppError(404, 'Worker profile not found.', 'WORKER_NOT_FOUND');
+    }
+
+    const setClauses = ['is_verified = $1'];
+    const params = [is_verified];
+
+    if (guild_endorsement !== undefined) {
+      params.push(guild_endorsement);
+      setClauses.push(`guild_endorsement = $${params.length}`);
+    }
+
+    params.push(worker.id);
+    const idParamIndex = params.length;
+
+    const updateResult = await dbQuery(
+      `
+      UPDATE workers
+      SET ${setClauses.join(', ')}
+      WHERE id = $${idParamIndex}
+      RETURNING
+        id,
+        user_id,
+        slug,
+        full_name,
+        trade,
+        location,
+        phone,
+        bio,
+        years_experience,
+        guild_endorsement,
+        instagram_handle,
+        avatar_url,
+        is_verified,
+        created_at
+      `,
+      params,
+    );
+
+    const hydrated = await hydrateWorker(updateResult.rows[0]);
+
+    res.status(200).json({
+      data: hydrated,
     });
   }
 
@@ -681,10 +904,13 @@ export function createWorkersController(deps = {}) {
 
   return {
     getHealth,
+    getMetaFilters,
     listWorkers,
     getWorkerBySlug,
     createWorker,
     updateWorker,
+    uploadAvatar,
+    verifyWorker,
     uploadWorkSample,
     createReview,
   };

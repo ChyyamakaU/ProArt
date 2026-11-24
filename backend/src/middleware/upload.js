@@ -104,6 +104,11 @@ const uploader = multer({
 export const uploadSinglePhoto = uploader.single('photo');
 
 /**
+ * Middleware that accepts a single multipart profile avatar under the `avatar` field.
+ */
+export const uploadSingleAvatar = uploader.single('avatar');
+
+/**
  * Verifies magic bytes against the whitelisted MIME type and writes the image
  * to disk under a randomized UUID filename (never trusting `originalname`).
  *

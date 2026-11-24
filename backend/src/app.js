@@ -32,11 +32,16 @@ export function createApp(options = {}) {
 
   const app = express();
 
+  // Trust the first reverse proxy hop (Render/Railway/Fly/Nginx) for accurate client IP rate limiting.
+  app.set('trust proxy', 1);
+
   // Disable framework fingerprinting header explicitly.
   app.disable('x-powered-by');
 
-  // Trust configured proxy hops for accurate client IP rate limiting.
-  if (trustProxy > 0) {
+  // Allow explicit override if configured via options or non-default TRUST_PROXY env.
+  if (options.trustProxy !== undefined) {
+    app.set('trust proxy', options.trustProxy);
+  } else if (trustProxy > 1) {
     app.set('trust proxy', trustProxy);
   }
 

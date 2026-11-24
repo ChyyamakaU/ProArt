@@ -125,7 +125,7 @@ export function errorHandler(err, _req, res, _next) {
     }
     if (err.code === 'LIMIT_UNEXPECTED_FILE') {
       res.status(400).json({
-        error: 'Unexpected file field. Upload the image under the "photo" field.',
+        error: 'Unexpected file field in upload request.',
         code: 'UNEXPECTED_FILE_FIELD',
       });
       return;

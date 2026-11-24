@@ -3,7 +3,7 @@ import { workersController } from '../controllers/workers.controller.js';
 import { requireAuth } from '../middleware/auth.js';
 import { asyncHandler } from '../middleware/errorHandler.js';
 import { strictWriteRateLimiter } from '../middleware/rateLimiter.js';
-import { uploadSinglePhoto } from '../middleware/upload.js';
+import { uploadSingleAvatar, uploadSinglePhoto } from '../middleware/upload.js';
 import { validate } from '../middleware/validate.js';
 import {
   createReviewBodySchema,
@@ -13,10 +13,11 @@ import {
   listWorkersQuerySchema,
   slugParamSchema,
   updateWorkerBodySchema,
+  verifyWorkerBodySchema,
 } from '../validators/workers.schema.js';
 
 /**
- * Builds the API router for health and worker Trust Card endpoints.
+ * Builds the API router for health, metadata filters, and worker Trust Card endpoints.
  *
  * @param {{
  *   controller?: ReturnType<import('../controllers/workers.controller.js').createWorkersController>,
@@ -37,7 +38,14 @@ export function createWorkersRouter(options = {}) {
     asyncHandler(controller.getHealth),
   );
 
-  // List / search workers with pagination (Public)
+  // Dynamic platform filter dropdowns & live hero stats (Public)
+  router.get(
+    '/meta/filters',
+    validate({ params: emptyObjectSchema, query: emptyObjectSchema }),
+    asyncHandler(controller.getMetaFilters),
+  );
+
+  // List / search workers with pagination & optional ?verified_only=true (Public)
   router.get(
     '/workers',
     validate({ params: emptyObjectSchema, query: listWorkersQuerySchema }),
@@ -75,6 +83,30 @@ export function createWorkersRouter(options = {}) {
       body: updateWorkerBodySchema,
     }),
     asyncHandler(controller.updateWorker),
+  );
+
+  // Admin verification toggle & guild endorsement update (Protected by JWT + Admin role)
+  router.patch(
+    '/workers/:slug/verify',
+    requireAuth,
+    writeLimiter,
+    validate({
+      params: slugParamSchema,
+      query: emptyObjectSchema,
+      body: verifyWorkerBodySchema,
+    }),
+    asyncHandler(controller.verifyWorker),
+  );
+
+  // Upload profile avatar photo (Protected by JWT + ownership/admin check)
+  router.post(
+    '/workers/:slug/avatar',
+    requireAuth,
+    writeLimiter,
+    validate({ params: slugParamSchema, query: emptyObjectSchema }),
+    uploadSingleAvatar,
+    validate({ body: emptyObjectSchema }),
+    asyncHandler(controller.uploadAvatar),
   );
 
   // Upload verified work sample photo + caption (Protected by JWT + ownership/admin check)

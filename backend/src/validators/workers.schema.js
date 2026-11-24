@@ -87,6 +87,10 @@ export const listWorkersQuerySchema = z
     trade: z.string().trim().min(1).max(80).optional(),
     location: z.string().trim().min(1).max(120).optional(),
     q: z.string().trim().min(1).max(100).optional(),
+    verified_only: z
+      .enum(['true', 'false'])
+      .optional()
+      .transform((val) => val === 'true'),
     limit: z.coerce.number().int().min(1).max(50).optional().default(20),
     offset: z.coerce.number().int().min(0).max(10_000).optional().default(0),
   })
@@ -163,6 +167,16 @@ export const updateWorkerBodySchema = z
   .refine((data) => Object.values(data).some((v) => v !== undefined), {
     message: 'At least one updatable field must be provided.',
   });
+
+/**
+ * Request body schema for PATCH /api/workers/:slug/verify (Admin only).
+ */
+export const verifyWorkerBodySchema = z
+  .object({
+    is_verified: z.boolean({ error: 'is_verified must be a boolean' }),
+    guild_endorsement: optionalGuildEndorsementSchema,
+  })
+  .strict();
 
 /**
  * Request body schema for POST /api/workers/:slug/samples (multipart fields).
