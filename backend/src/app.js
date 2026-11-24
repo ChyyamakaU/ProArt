@@ -4,6 +4,7 @@ import helmet from 'helmet';
 import { env } from './config/env.js';
 import { errorHandler, notFoundHandler } from './middleware/errorHandler.js';
 import { apiRateLimiter } from './middleware/rateLimiter.js';
+import { createAuthRouter } from './routes/auth.routes.js';
 import { createWorkersRouter } from './routes/workers.routes.js';
 import { AppError } from './utils/AppError.js';
 
@@ -17,7 +18,9 @@ import { AppError } from './utils/AppError.js';
  *   trustProxy?: number,
  *   apiLimiter?: import('express').RequestHandler,
  *   writeLimiter?: import('express').RequestHandler,
+ *   authLimiter?: import('express').RequestHandler,
  *   controller?: ReturnType<import('./controllers/workers.controller.js').createWorkersController>,
+ *   authController?: ReturnType<import('./controllers/auth.controller.js').createAuthController>,
  * }} [options]
  * @returns {import('express').Express}
  */
@@ -114,7 +117,16 @@ export function createApp(options = {}) {
   // Apply general API rate limiter across all /api routes.
   app.use('/api', generalLimiter);
 
-  // Mount domain routes.
+  // Mount authentication routes.
+  app.use(
+    '/api/auth',
+    createAuthRouter({
+      controller: options.authController,
+      authLimiter: options.authLimiter,
+    }),
+  );
+
+  // Mount worker & health domain routes.
   app.use(
     '/api',
     createWorkersRouter({

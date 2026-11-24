@@ -8,6 +8,19 @@ import { buildWhatsAppLinks } from '../utils/whatsapp.js';
 const MAX_SLUG_RETRIES = 5;
 
 /**
+ * Explicit allow-list mapping validated PATCH body keys to SQL column names.
+ * Prevents dynamic column injection.
+ */
+const ALLOWED_PATCH_COLUMNS = Object.freeze({
+  bio: 'bio',
+  location: 'location',
+  years_experience: 'years_experience',
+  guild_endorsement: 'guild_endorsement',
+  instagram_handle: 'instagram_handle',
+  phone: 'phone',
+});
+
+/**
  * Escapes SQL LIKE wildcards so user input is treated as literal characters.
  *
  * @param {string} value
@@ -18,12 +31,53 @@ function escapeLikePattern(value) {
 }
 
 /**
- * Maps a raw worker row to a public, PII-minimized DTO.
- * Never exposes internal database IDs or raw phone columns directly.
+ * Maps a raw work sample row to its public DTO.
+ *
+ * @param {Record<string, any>} sample
+ */
+function toPublicSample(sample) {
+  return {
+    image_url: sample.image_url,
+    caption: sample.caption ?? '',
+    created_at: sample.created_at,
+  };
+}
+
+/**
+ * Maps a raw review row to its PII-minimized public DTO (strips client_phone & internal IDs).
+ *
+ * @param {Record<string, any>} review
+ */
+function toPublicReview(review) {
+  return {
+    client_name: review.client_name,
+    job_description: review.job_description ?? null,
+    rating: Number(review.rating),
+    comment: review.comment ?? '',
+    created_at: review.created_at,
+  };
+}
+
+/**
+ * Maps a raw worker row to a public, PII-minimized Trust Card DTO.
+ * Never exposes internal database IDs, `user_id`, `password_hash`, or raw phone fields.
  *
  * @param {Record<string, any>} row
+ * @param {{ workSamples?: Array<Record<string, any>>, reviews?: Array<Record<string, any>> }} [extras]
  */
-function toPublicWorkerSummary(row) {
+function toPublicWorker(row, extras = {}) {
+  const workSamples = Array.isArray(extras.workSamples)
+    ? extras.workSamples.map(toPublicSample)
+    : Array.isArray(row.work_samples)
+      ? row.work_samples.map(toPublicSample)
+      : [];
+
+  const reviews = Array.isArray(extras.reviews)
+    ? extras.reviews.map(toPublicReview)
+    : Array.isArray(row.reviews)
+      ? row.reviews.map(toPublicReview)
+      : [];
+
   return {
     slug: row.slug,
     full_name: row.full_name,
@@ -31,11 +85,17 @@ function toPublicWorkerSummary(row) {
     location: row.location,
     bio: row.bio,
     years_experience: Number(row.years_experience),
+    guild_endorsement: row.guild_endorsement ?? null,
+    instagram_handle: row.instagram_handle ?? null,
+    avatar_url: row.avatar_url ?? null,
     is_verified: Boolean(row.is_verified),
-    avg_rating: row.avg_rating !== null && row.avg_rating !== undefined ? Number(row.avg_rating) : null,
-    review_count: Number(row.review_count ?? 0),
-    sample_count: Number(row.sample_count ?? 0),
-    cover_image_url: row.cover_image_url ?? null,
+    avg_rating:
+      row.avg_rating !== null && row.avg_rating !== undefined
+        ? Number(row.avg_rating)
+        : null,
+    review_count: Number(row.review_count ?? reviews.length),
+    work_samples: workSamples,
+    reviews,
     whatsapp_links: buildWhatsAppLinks({
       slug: row.slug,
       full_name: row.full_name,
@@ -45,6 +105,28 @@ function toPublicWorkerSummary(row) {
     }),
     created_at: row.created_at,
   };
+}
+
+/**
+ * Verifies that the authenticated caller owns the target worker profile or holds
+ * the `'admin'` role.
+ *
+ * @param {{ user_id: number | null }} worker
+ * @param {{ id: number, role: string }} user
+ */
+function assertWorkerOwnership(worker, user) {
+  const ownerId =
+    worker.user_id !== null && worker.user_id !== undefined
+      ? Number(worker.user_id)
+      : null;
+
+  if (ownerId !== user.id && user.role !== 'admin') {
+    throw new AppError(
+      403,
+      'You do not have permission to modify this worker profile.',
+      'FORBIDDEN',
+    );
+  }
 }
 
 /**
@@ -88,7 +170,7 @@ export function createWorkersController(deps = {}) {
   /**
    * GET /api/workers
    * Parameterized search and filtering by `trade`, `location`, and free-text `q`,
-   * with bounded pagination (`limit`, `offset`).
+   * with bounded pagination (`limit`, `offset`) and complete public Trust Card fields.
    *
    * @type {import('express').RequestHandler}
    */
@@ -112,7 +194,7 @@ export function createWorkersController(deps = {}) {
       filterParams.push(`%${escapeLikePattern(q)}%`);
       const idx = filterParams.length;
       whereClauses.push(
-        `(w.full_name ILIKE $${idx} ESCAPE '\\' OR w.trade ILIKE $${idx} ESCAPE '\\' OR w.location ILIKE $${idx} ESCAPE '\\' OR w.bio ILIKE $${idx} ESCAPE '\\')`,
+        `(w.full_name ILIKE $${idx} ESCAPE '\\' OR w.trade ILIKE $${idx} ESCAPE '\\' OR w.location ILIKE $${idx} ESCAPE '\\' OR w.bio ILIKE $${idx} ESCAPE '\\' OR COALESCE(w.guild_endorsement, '') ILIKE $${idx} ESCAPE '\\')`,
       );
     }
 
@@ -136,30 +218,49 @@ export function createWorkersController(deps = {}) {
         w.phone,
         w.bio,
         w.years_experience,
+        w.guild_endorsement,
+        w.instagram_handle,
+        w.avatar_url,
         w.is_verified,
         w.created_at,
         COALESCE(rev.review_count, 0)::int AS review_count,
         rev.avg_rating,
-        COALESCE(ws.sample_count, 0)::int AS sample_count,
-        ws.cover_image_url
+        COALESCE(ws.work_samples, '[]'::json) AS work_samples,
+        COALESCE(rev.reviews, '[]'::json) AS reviews
       FROM workers w
       LEFT JOIN LATERAL (
         SELECT
           COUNT(*)::int AS review_count,
-          ROUND(AVG(r.rating)::numeric, 2) AS avg_rating
+          ROUND(AVG(r.rating)::numeric, 2) AS avg_rating,
+          COALESCE(
+            json_agg(
+              json_build_object(
+                'client_name', r.client_name,
+                'job_description', r.job_description,
+                'rating', r.rating,
+                'comment', r.comment,
+                'created_at', r.created_at
+              )
+              ORDER BY r.created_at DESC
+            ) FILTER (WHERE r.id IS NOT NULL),
+            '[]'::json
+          ) AS reviews
         FROM reviews r
         WHERE r.worker_id = w.id
       ) rev ON TRUE
       LEFT JOIN LATERAL (
         SELECT
-          COUNT(*)::int AS sample_count,
-          (
-            SELECT s.image_url
-            FROM work_samples s
-            WHERE s.worker_id = w.id
-            ORDER BY s.created_at DESC
-            LIMIT 1
-          ) AS cover_image_url
+          COALESCE(
+            json_agg(
+              json_build_object(
+                'image_url', s.image_url,
+                'caption', s.caption,
+                'created_at', s.created_at
+              )
+              ORDER BY s.created_at DESC
+            ) FILTER (WHERE s.id IS NOT NULL),
+            '[]'::json
+          ) AS work_samples
         FROM work_samples s
         WHERE s.worker_id = w.id
       ) ws ON TRUE
@@ -177,7 +278,7 @@ export function createWorkersController(deps = {}) {
     const total = Number(countResult.rows[0]?.total ?? 0);
 
     res.status(200).json({
-      data: listResult.rows.map(toPublicWorkerSummary),
+      data: listResult.rows.map((row) => toPublicWorker(row)),
       pagination: {
         total,
         limit,
@@ -208,6 +309,9 @@ export function createWorkersController(deps = {}) {
         w.phone,
         w.bio,
         w.years_experience,
+        w.guild_endorsement,
+        w.instagram_handle,
+        w.avatar_url,
         w.is_verified,
         w.created_at,
         COALESCE(rev.review_count, 0)::int AS review_count,
@@ -243,7 +347,7 @@ export function createWorkersController(deps = {}) {
       ),
       dbQuery(
         `
-        SELECT client_name, rating, comment, created_at
+        SELECT client_name, job_description, rating, comment, created_at
         FROM reviews
         WHERE worker_id = $1
         ORDER BY created_at DESC
@@ -253,50 +357,45 @@ export function createWorkersController(deps = {}) {
     ]);
 
     res.status(200).json({
-      data: {
-        slug: worker.slug,
-        full_name: worker.full_name,
-        trade: worker.trade,
-        location: worker.location,
-        bio: worker.bio,
-        years_experience: Number(worker.years_experience),
-        is_verified: Boolean(worker.is_verified),
-        avg_rating:
-          worker.avg_rating !== null && worker.avg_rating !== undefined
-            ? Number(worker.avg_rating)
-            : null,
-        review_count: Number(worker.review_count ?? 0),
-        work_samples: samplesResult.rows.map((sample) => ({
-          image_url: sample.image_url,
-          caption: sample.caption,
-          created_at: sample.created_at,
-        })),
-        reviews: reviewsResult.rows.map((review) => ({
-          client_name: review.client_name,
-          rating: Number(review.rating),
-          comment: review.comment,
-          created_at: review.created_at,
-        })),
-        whatsapp_links: buildWhatsAppLinks({
-          slug: worker.slug,
-          full_name: worker.full_name,
-          trade: worker.trade,
-          location: worker.location,
-          phone: worker.phone,
-        }),
-        created_at: worker.created_at,
-      },
+      data: toPublicWorker(worker, {
+        workSamples: samplesResult.rows,
+        reviews: reviewsResult.rows,
+      }),
     });
   }
 
   /**
-   * POST /api/workers
-   * Creates a new worker profile with sanitized phone number and collision-safe slug.
+   * POST /api/workers (Protected by requireAuth)
+   * Creates a new worker profile linked to the authenticated user (`req.user.id`),
+   * preventing duplicate profiles per non-admin worker account.
    *
    * @type {import('express').RequestHandler}
    */
   async function createWorker(req, res) {
-    const { full_name, trade, location, phone, bio, years_experience } = req.validated.body;
+    const {
+      full_name,
+      trade,
+      location,
+      phone,
+      bio,
+      years_experience,
+      guild_endorsement = null,
+      instagram_handle = null,
+    } = req.validated.body;
+
+    if (req.user.role !== 'admin') {
+      const existing = await dbQuery(
+        'SELECT slug FROM workers WHERE user_id = $1 LIMIT 1',
+        [req.user.id],
+      );
+      if (existing.rows.length > 0) {
+        throw new AppError(
+          409,
+          'You already have a worker profile. Update your existing profile instead.',
+          'WORKER_PROFILE_EXISTS',
+        );
+      }
+    }
 
     let created = null;
     for (let attempt = 0; attempt < MAX_SLUG_RETRIES; attempt += 1) {
@@ -304,8 +403,19 @@ export function createWorkersController(deps = {}) {
       try {
         const result = await dbQuery(
           `
-          INSERT INTO workers (slug, full_name, trade, location, phone, bio, years_experience)
-          VALUES ($1, $2, $3, $4, $5, $6, $7)
+          INSERT INTO workers (
+            user_id,
+            slug,
+            full_name,
+            trade,
+            location,
+            phone,
+            bio,
+            years_experience,
+            guild_endorsement,
+            instagram_handle
+          )
+          VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10)
           RETURNING
             slug,
             full_name,
@@ -314,10 +424,24 @@ export function createWorkersController(deps = {}) {
             phone,
             bio,
             years_experience,
+            guild_endorsement,
+            instagram_handle,
+            avatar_url,
             is_verified,
             created_at
           `,
-          [slug, full_name, trade, location, phone, bio, years_experience],
+          [
+            req.user.id,
+            slug,
+            full_name,
+            trade,
+            location,
+            phone,
+            bio,
+            years_experience,
+            guild_endorsement,
+            instagram_handle,
+          ],
         );
         created = result.rows[0];
         break;
@@ -339,30 +463,126 @@ export function createWorkersController(deps = {}) {
     }
 
     res.status(201).json({
-      data: {
-        slug: created.slug,
-        full_name: created.full_name,
-        trade: created.trade,
-        location: created.location,
-        bio: created.bio,
-        years_experience: Number(created.years_experience),
-        is_verified: Boolean(created.is_verified),
-        whatsapp_links: buildWhatsAppLinks({
-          slug: created.slug,
-          full_name: created.full_name,
-          trade: created.trade,
-          location: created.location,
-          phone: created.phone,
-        }),
-        created_at: created.created_at,
-      },
+      data: toPublicWorker(created, { workSamples: [], reviews: [] }),
     });
   }
 
   /**
-   * POST /api/workers/:slug/samples
-   * Verifies uploaded photo magic bytes, stores under a randomized UUID filename,
-   * and links the work sample to the target worker.
+   * PATCH /api/workers/:slug (Protected by requireAuth)
+   * Updates owner-editable worker profile fields after verifying ownership or admin role.
+   *
+   * @type {import('express').RequestHandler}
+   */
+  async function updateWorker(req, res) {
+    const { slug } = req.validated.params;
+    const updates = req.validated.body;
+
+    const existingResult = await dbQuery(
+      'SELECT id, user_id FROM workers WHERE slug = $1 LIMIT 1',
+      [slug],
+    );
+    const worker = existingResult.rows[0];
+
+    if (!worker) {
+      throw new AppError(404, 'Worker profile not found.', 'WORKER_NOT_FOUND');
+    }
+
+    assertWorkerOwnership(worker, req.user);
+
+    const setClauses = [];
+    const params = [];
+
+    for (const [key, columnName] of Object.entries(ALLOWED_PATCH_COLUMNS)) {
+      if (updates[key] !== undefined) {
+        params.push(updates[key]);
+        setClauses.push(`${columnName} = $${params.length}`);
+      }
+    }
+
+    if (setClauses.length === 0) {
+      throw new AppError(400, 'At least one updatable field must be provided.', 'VALIDATION_ERROR');
+    }
+
+    params.push(worker.id);
+    const idParamIndex = params.length;
+
+    const updateResult = await dbQuery(
+      `
+      UPDATE workers
+      SET ${setClauses.join(', ')}
+      WHERE id = $${idParamIndex}
+      RETURNING
+        id,
+        slug,
+        full_name,
+        trade,
+        location,
+        phone,
+        bio,
+        years_experience,
+        guild_endorsement,
+        instagram_handle,
+        avatar_url,
+        is_verified,
+        created_at
+      `,
+      params,
+    );
+
+    const updated = updateResult.rows[0];
+
+    const [statsResult, samplesResult, reviewsResult] = await Promise.all([
+      dbQuery(
+        `
+        SELECT
+          COUNT(*)::int AS review_count,
+          ROUND(AVG(rating)::numeric, 2) AS avg_rating
+        FROM reviews
+        WHERE worker_id = $1
+        `,
+        [updated.id],
+      ),
+      dbQuery(
+        `
+        SELECT image_url, caption, created_at
+        FROM work_samples
+        WHERE worker_id = $1
+        ORDER BY created_at DESC
+        `,
+        [updated.id],
+      ),
+      dbQuery(
+        `
+        SELECT client_name, job_description, rating, comment, created_at
+        FROM reviews
+        WHERE worker_id = $1
+        ORDER BY created_at DESC
+        `,
+        [updated.id],
+      ),
+    ]);
+
+    const stats = statsResult.rows[0] ?? { review_count: 0, avg_rating: null };
+
+    res.status(200).json({
+      data: toPublicWorker(
+        {
+          ...updated,
+          review_count: stats.review_count,
+          avg_rating: stats.avg_rating,
+        },
+        {
+          workSamples: samplesResult.rows,
+          reviews: reviewsResult.rows,
+        },
+      ),
+    });
+  }
+
+  /**
+   * POST /api/workers/:slug/samples (Protected by requireAuth)
+   * Verifies profile ownership (or admin role), checks magic bytes, stores under
+   * a randomized UUID filename, and links the work sample to the target worker.
    *
    * @type {import('express').RequestHandler}
    */
@@ -371,7 +591,7 @@ export function createWorkersController(deps = {}) {
     const { caption } = req.validated.body;
 
     const workerResult = await dbQuery(
-      'SELECT id FROM workers WHERE slug = $1 LIMIT 1',
+      'SELECT id, user_id FROM workers WHERE slug = $1 LIMIT 1',
       [slug],
     );
     const worker = workerResult.rows[0];
@@ -379,6 +599,8 @@ export function createWorkersController(deps = {}) {
     if (!worker) {
       throw new AppError(404, 'Worker profile not found.', 'WORKER_NOT_FOUND');
     }
+
+    assertWorkerOwnership(worker, req.user);
 
     const savedFile = await verifyAndSaveImage(req.file, uploadDir);
 
@@ -395,11 +617,7 @@ export function createWorkersController(deps = {}) {
       const sample = insertResult.rows[0];
 
       res.status(201).json({
-        data: {
-          image_url: sample.image_url,
-          caption: sample.caption,
-          created_at: sample.created_at,
-        },
+        data: toPublicSample(sample),
       });
     } catch (err) {
       await cleanupUploadedFile(savedFile.absolutePath);
@@ -408,15 +626,21 @@ export function createWorkersController(deps = {}) {
   }
 
   /**
-   * POST /api/workers/:slug/reviews
-   * Submits a verified client review (rating 1-5) while preventing duplicate
-   * review spam from the same client phone number on the same worker.
+   * POST /api/workers/:slug/reviews (Public)
+   * Submits a verified client review (rating 1-5) with optional `job_description`
+   * while preventing duplicate review spam from the same client phone per worker.
    *
    * @type {import('express').RequestHandler}
    */
   async function createReview(req, res) {
     const { slug } = req.validated.params;
-    const { client_name, client_phone, rating, comment } = req.validated.body;
+    const {
+      client_name,
+      client_phone,
+      job_description = null,
+      rating,
+      comment,
+    } = req.validated.body;
 
     const workerResult = await dbQuery(
       'SELECT id FROM workers WHERE slug = $1 LIMIT 1',
@@ -431,22 +655,17 @@ export function createWorkersController(deps = {}) {
     try {
       const insertResult = await dbQuery(
         `
-        INSERT INTO reviews (worker_id, client_name, client_phone, rating, comment)
-        VALUES ($1, $2, $3, $4, $5)
-        RETURNING client_name, rating, comment, created_at
+        INSERT INTO reviews (worker_id, client_name, client_phone, job_description, rating, comment)
+        VALUES ($1, $2, $3, $4, $5, $6)
+        RETURNING client_name, job_description, rating, comment, created_at
         `,
-        [worker.id, client_name, client_phone, rating, comment],
+        [worker.id, client_name, client_phone, job_description, rating, comment],
       );
 
       const review = insertResult.rows[0];
 
       res.status(201).json({
-        data: {
-          client_name: review.client_name,
-          rating: Number(review.rating),
-          comment: review.comment,
-          created_at: review.created_at,
-        },
+        data: toPublicReview(review),
       });
     } catch (err) {
       if (err?.code === '23505') {
@@ -465,6 +684,7 @@ export function createWorkersController(deps = {}) {
     listWorkers,
     getWorkerBySlug,
     createWorker,
+    updateWorker,
     uploadWorkSample,
     createReview,
   };

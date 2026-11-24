@@ -1,7 +1,8 @@
 import { env } from '../config/env.js';
 
 /**
- * Builds pre-encoded WhatsApp deep links for direct hiring and Trust Card sharing.
+ * Builds pre-encoded WhatsApp deep links and public Trust Card URL for direct
+ * hiring and profile sharing.
  *
  * @param {object} worker
  * @param {string} worker.slug - Worker public slug.
@@ -9,10 +10,10 @@ import { env } from '../config/env.js';
  * @param {string} worker.trade - Worker trade/specialty.
  * @param {string} worker.location - Worker location.
  * @param {string} worker.phone - Sanitized digits-only phone number (E.164 digits).
- * @returns {{ hire: string, share: string }}
+ * @returns {{ hire_url: string, share_url: string, card_url: string }}
  */
 export function buildWhatsAppLinks(worker) {
-  const profileUrl = `${env.FRONTEND_URL}/workers/${encodeURIComponent(worker.slug)}`;
+  const cardUrl = `${env.FRONTEND_URL}/workers/${encodeURIComponent(worker.slug)}`;
 
   const hireMessage = [
     `Hello ${worker.full_name},`,
@@ -22,11 +23,12 @@ export function buildWhatsAppLinks(worker) {
 
   const shareMessage = [
     `Check out ${worker.full_name} (${worker.trade} in ${worker.location}) on SkillVerify:`,
-    profileUrl,
+    cardUrl,
   ].join(' ');
 
   return {
-    hire: `https://wa.me/${encodeURIComponent(worker.phone)}?text=${encodeURIComponent(hireMessage)}`,
-    share: `https://wa.me/?text=${encodeURIComponent(shareMessage)}`,
+    hire_url: `https://wa.me/${encodeURIComponent(worker.phone)}?text=${encodeURIComponent(hireMessage)}`,
+    share_url: `https://wa.me/?text=${encodeURIComponent(shareMessage)}`,
+    card_url: cardUrl,
   };
 }

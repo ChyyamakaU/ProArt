@@ -1,5 +1,6 @@
 import { Router } from 'express';
 import { workersController } from '../controllers/workers.controller.js';
+import { requireAuth } from '../middleware/auth.js';
 import { asyncHandler } from '../middleware/errorHandler.js';
 import { strictWriteRateLimiter } from '../middleware/rateLimiter.js';
 import { uploadSinglePhoto } from '../middleware/upload.js';
@@ -11,6 +12,7 @@ import {
   emptyObjectSchema,
   listWorkersQuerySchema,
   slugParamSchema,
+  updateWorkerBodySchema,
 } from '../validators/workers.schema.js';
 
 /**
@@ -28,23 +30,24 @@ export function createWorkersRouter(options = {}) {
 
   const router = Router();
 
-  // Health & DB readiness probe
+  // Health & DB readiness probe (Public)
   router.get(
     '/health',
     validate({ params: emptyObjectSchema, query: emptyObjectSchema }),
     asyncHandler(controller.getHealth),
   );
 
-  // List / search workers with pagination
+  // List / search workers with pagination (Public)
   router.get(
     '/workers',
     validate({ params: emptyObjectSchema, query: listWorkersQuerySchema }),
     asyncHandler(controller.listWorkers),
   );
 
-  // Create worker profile (strict write rate limit)
+  // Create worker profile (Protected by JWT + strict write rate limit)
   router.post(
     '/workers',
+    requireAuth,
     writeLimiter,
     validate({
       params: emptyObjectSchema,
@@ -54,16 +57,30 @@ export function createWorkersRouter(options = {}) {
     asyncHandler(controller.createWorker),
   );
 
-  // Fetch full worker Trust Card profile by slug
+  // Fetch full worker Trust Card profile by slug (Public)
   router.get(
     '/workers/:slug',
     validate({ params: slugParamSchema, query: emptyObjectSchema }),
     asyncHandler(controller.getWorkerBySlug),
   );
 
-  // Upload verified work sample photo + caption (strict write rate limit)
+  // Update worker profile (Protected by JWT + ownership/admin check + strict write rate limit)
+  router.patch(
+    '/workers/:slug',
+    requireAuth,
+    writeLimiter,
+    validate({
+      params: slugParamSchema,
+      query: emptyObjectSchema,
+      body: updateWorkerBodySchema,
+    }),
+    asyncHandler(controller.updateWorker),
+  );
+
+  // Upload verified work sample photo + caption (Protected by JWT + ownership/admin check)
   router.post(
     '/workers/:slug/samples',
+    requireAuth,
     writeLimiter,
     validate({ params: slugParamSchema, query: emptyObjectSchema }),
     uploadSinglePhoto,
@@ -71,7 +88,7 @@ export function createWorkersRouter(options = {}) {
     asyncHandler(controller.uploadWorkSample),
   );
 
-  // Submit client review (strict write rate limit)
+  // Submit client review (Public + strict write rate limit + duplicate-phone guard)
   router.post(
     '/workers/:slug/reviews',
     writeLimiter,

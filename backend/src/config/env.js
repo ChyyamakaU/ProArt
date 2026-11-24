@@ -101,6 +101,19 @@ const envSchema = z.object({
       'FRONTEND_URL must use http:// or https://',
     )
     .transform((val) => val.replace(/\/+$/, '')),
+  JWT_SECRET: z
+    .string({ error: 'JWT_SECRET is required' })
+    .trim()
+    .min(32, 'JWT_SECRET must be at least 32 characters long'),
+  JWT_EXPIRES_IN: z
+    .string()
+    .trim()
+    .regex(
+      /^\d+[smhdw]?$/,
+      'JWT_EXPIRES_IN must be a valid duration string (e.g., 7d, 24h, 3600)',
+    )
+    .optional()
+    .default('7d'),
   UPLOAD_DIR: z
     .string()
     .trim()

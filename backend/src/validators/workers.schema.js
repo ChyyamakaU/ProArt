@@ -28,6 +28,44 @@ const sanitizedPhoneSchema = z
   });
 
 /**
+ * Optional nullable guild endorsement string schema.
+ */
+const optionalGuildEndorsementSchema = z
+  .string()
+  .trim()
+  .max(150, 'Guild endorsement must be at most 150 characters')
+  .nullable()
+  .optional()
+  .transform((val) => {
+    if (val === undefined) return undefined;
+    if (val === null || val === '') return null;
+    return val;
+  });
+
+/**
+ * Optional nullable Instagram handle schema (validates safe handle characters).
+ */
+const optionalInstagramHandleSchema = z
+  .string()
+  .trim()
+  .max(80, 'Instagram handle must be at most 80 characters')
+  .nullable()
+  .optional()
+  .transform((val, ctx) => {
+    if (val === undefined) return undefined;
+    if (val === null || val === '') return null;
+    const normalized = val.replace(/^@+/, '');
+    if (!/^[a-zA-Z0-9._]{1,79}$/.test(normalized)) {
+      ctx.addIssue({
+        code: 'custom',
+        message: 'Instagram handle may only contain letters, numbers, periods, and underscores',
+      });
+      return z.NEVER;
+    }
+    return `@${normalized}`;
+  });
+
+/**
  * Route params schema for endpoints addressed by worker slug.
  */
 export const slugParamSchema = z
@@ -56,7 +94,7 @@ export const listWorkersQuerySchema = z
 
 /**
  * Request body schema for POST /api/workers.
- * Strictly forbids privileged/internal fields like `id`, `slug`, or `is_verified`.
+ * Strictly forbids privileged/internal fields like `id`, `slug`, `user_id`, or `is_verified`.
  */
 export const createWorkerBodySchema = z
   .object({
@@ -89,8 +127,42 @@ export const createWorkerBodySchema = z
       .max(70, 'Years of experience cannot exceed 70')
       .optional()
       .default(0),
+    guild_endorsement: optionalGuildEndorsementSchema,
+    instagram_handle: optionalInstagramHandleSchema,
   })
   .strict();
+
+/**
+ * Request body schema for PATCH /api/workers/:slug.
+ * Only permits explicit owner-editable profile fields.
+ */
+export const updateWorkerBodySchema = z
+  .object({
+    bio: z
+      .string()
+      .trim()
+      .max(1000, 'Bio must be at most 1000 characters')
+      .optional(),
+    location: z
+      .string()
+      .trim()
+      .min(2, 'Location must be at least 2 characters')
+      .max(120, 'Location must be at most 120 characters')
+      .optional(),
+    years_experience: z.coerce
+      .number()
+      .int('Years of experience must be a whole number')
+      .min(0, 'Years of experience cannot be negative')
+      .max(70, 'Years of experience cannot exceed 70')
+      .optional(),
+    guild_endorsement: optionalGuildEndorsementSchema,
+    instagram_handle: optionalInstagramHandleSchema,
+    phone: sanitizedPhoneSchema.optional(),
+  })
+  .strict()
+  .refine((data) => Object.values(data).some((v) => v !== undefined), {
+    message: 'At least one updatable field must be provided.',
+  });
 
 /**
  * Request body schema for POST /api/workers/:slug/samples (multipart fields).
@@ -117,6 +189,16 @@ export const createReviewBodySchema = z
       .min(2, 'Client name must be at least 2 characters')
       .max(100, 'Client name must be at most 100 characters'),
     client_phone: sanitizedPhoneSchema,
+    job_description: z
+      .string()
+      .trim()
+      .max(300, 'Job description must be at most 300 characters')
+      .nullable()
+      .optional()
+      .transform((val) => {
+        if (val === undefined || val === null || val === '') return null;
+        return val;
+      }),
     rating: z.coerce
       .number({ error: 'Rating is required' })
       .int('Rating must be a whole number between 1 and 5')
