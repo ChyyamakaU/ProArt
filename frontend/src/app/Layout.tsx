@@ -31,7 +31,7 @@ export function Layout() {
               ? <NavLink to="/admin/verification">Verification reviews</NavLink>
               : <NavLink to={session.me?.worker === null && session.me.user.role === 'worker' ? '/onboarding' : '/dashboard'}>Dashboard</NavLink>}
             <button type="button" onClick={() => { session.signOut(); void navigate('/login', { replace: true }); }}>Sign out</button>
-          </> : <><NavLink to="/login">Sign in</NavLink><NavLink className="nav-join" to="/register">Join SkillVerify</NavLink></>}
+          </> : <><NavLink to="/login">Sign in</NavLink><NavLink className="nav-join" to="/register">Join ProArt</NavLink></>}
         </nav>
       </div>
     </header>

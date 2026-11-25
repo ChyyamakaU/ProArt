@@ -20,7 +20,7 @@ const maximumImageSize = 5 * 1024 * 1024;
 
 export function WorkerArea({ onboarding = false }: { onboarding?: boolean }) {
   const session = useSession();
-  usePageMetadata(onboarding ? 'Set up your Trust Card | SkillVerify' : 'Worker dashboard | SkillVerify', 'Manage your SkillVerify worker profile.');
+  usePageMetadata(onboarding ? 'Set up your Trust Card | ProArt' : 'Worker dashboard | ProArt', 'Manage your ProArt worker profile.');
   if (!session.signedIn) return <Navigate to="/login" replace />;
   if (session.error instanceof ApiError && session.error.status === 401) {
     return <div className="shell account-page"><Loading label="Ending session" /></div>;
@@ -153,7 +153,7 @@ function Dashboard({ worker }: { worker: OwnedWorker }) {
         <p className="profile-meta">{worker.location} · {worker.years_experience} {worker.years_experience === 1 ? 'year' : 'years'} of experience</p>
         <div className="actions">
           <Link className="button primary" to={path}>View public Trust Card</Link>
-          <ShareActions title={worker.full_name + ' | SkillVerify Trust Card'} url={url} />
+          <ShareActions title={worker.full_name + ' | ProArt Trust Card'} url={url} />
         </div>
       </div>
     </section>

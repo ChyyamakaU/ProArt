@@ -24,9 +24,9 @@ export function TrustCard() {
   const publicUrl = worker ? new URL('/workers/' + worker.slug, window.location.origin).href : undefined;
   const description = worker
     ? `View ${worker.full_name}’s public Trust Card for ${worker.trade} in ${worker.location}, including available work samples and client reviews.`
-    : 'View a public SkillVerify Trust Card.';
+    : 'View a public ProArt Trust Card.';
   usePageMetadata(
-    worker ? `${worker.full_name} · ${worker.trade} | SkillVerify` : (missing ? 'Trust Card not found | SkillVerify' : 'Trust Card | SkillVerify'),
+    worker ? `${worker.full_name} · ${worker.trade} | ProArt` : (missing ? 'Trust Card not found | ProArt' : 'Trust Card | ProArt'),
     description,
     publicUrl ? { url: publicUrl, image: mediaUrl(worker?.avatar_url ?? null) } : undefined,
   );
@@ -43,7 +43,7 @@ export function TrustCard() {
         </Feedback>
       : worker && <>
         <section className="credential-header">
-          <div className="credential-label"><IdCard size={21} aria-hidden="true" /><span>SkillVerify Trust Card</span>
+          <div className="credential-label"><IdCard size={21} aria-hidden="true" /><span>ProArt Trust Card</span>
             {presentation?.synthetic && <span className="demo-disclosure">Synthetic demo profile</span>}
           </div>
           <div className="credential-identity">
@@ -70,7 +70,7 @@ export function TrustCard() {
             ? 'Reach this professional through their public WhatsApp contact.' : 'This professional has no public WhatsApp contact available.'}</p>
           <div className="credential-actions">
             {contact && <a className="button primary" href={contact} target="_blank" rel="noopener noreferrer"><MessageCircle size={18} aria-hidden="true" /> Contact on WhatsApp</a>}
-            {publicUrl && <ShareActions key={worker.slug} url={publicUrl} title={worker.full_name + ' | SkillVerify Trust Card'} />}
+            {publicUrl && <ShareActions key={worker.slug} url={publicUrl} title={worker.full_name + ' | ProArt Trust Card'} />}
           </div>
         </aside>
         <div className="profile-sections">

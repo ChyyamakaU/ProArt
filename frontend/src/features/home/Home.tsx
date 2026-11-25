@@ -39,7 +39,7 @@ export function Home() {
         <div className="hero-content">
           <p className="eyebrow brand-position"><span aria-hidden="true" />Nigeria’s number one platform for verified skills and professional identity.</p>
           <h1>Skills you can prove.<br /><em>Trust you can build.</em></h1>
-          <p className="hero-description">SkillVerify helps skilled professionals establish credible digital identities, showcase their work and demonstrate verified skills — giving customers and businesses greater confidence in the people they hire.</p>
+          <p className="hero-description">ProArt helps skilled professionals establish credible digital identities, showcase their work and demonstrate verified skills — giving customers and businesses greater confidence in the people they hire.</p>
           <div className="actions">
             <Link className="button primary" to="/workers">Explore professionals</Link>
             <Link className="button secondary" to="/register">Create your Trust Card</Link>
@@ -64,7 +64,7 @@ export function Home() {
       <div className="shell editorial-section solution-section">
         <img src="/images/tailoring-studio.jpg" alt="Illustrative scene of a tailor sewing fabric in a Nigerian studio" width="1200" height="800" loading="lazy" />
         <div className="editorial-copy">
-          <p className="eyebrow">The SkillVerify Trust Card</p>
+          <p className="eyebrow">The ProArt Trust Card</p>
           <h2 id="solution-title">One link for the work you stand behind.</h2>
           <p>Bring your trade, experience, portfolio and client reviews together in a shareable professional profile. Customers can see the evidence for themselves and understand exactly which checks have been approved.</p>
           <a className="text-link" href="#verification">See how verification works</a>
