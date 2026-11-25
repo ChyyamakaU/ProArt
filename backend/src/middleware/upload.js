@@ -108,6 +108,8 @@ export const uploadSinglePhoto = uploader.single('photo');
  */
 export const uploadSingleAvatar = uploader.single('avatar');
 
+export const uploadSingleIdentityDocument = uploader.single('document');
+
 /**
  * Verifies magic bytes against the whitelisted MIME type and writes the image
  * to disk under a randomized UUID filename (never trusting `originalname`).
@@ -116,9 +118,9 @@ export const uploadSingleAvatar = uploader.single('avatar');
  * @param {string} uploadDir - Resolved target directory for persisted uploads.
  * @returns {Promise<{ filename: string, imageUrl: string, absolutePath: string, mime: string }>}
  */
-export async function verifyAndSaveImage(file, uploadDir) {
+export function validateUploadedImage(file, missingMessage = 'A work sample photo file is required.') {
   if (!file || !Buffer.isBuffer(file.buffer) || file.buffer.length === 0) {
-    throw new AppError(400, 'A work sample photo file is required.', 'FILE_REQUIRED');
+    throw new AppError(400, missingMessage, 'FILE_REQUIRED');
   }
 
   const detected = detectImageFromMagicBytes(file.buffer);
@@ -137,6 +139,11 @@ export async function verifyAndSaveImage(file, uploadDir) {
       'MIME_MISMATCH',
     );
   }
+  return detected;
+}
+
+export async function verifyAndSaveImage(file, uploadDir) {
+  const detected = validateUploadedImage(file);
 
   const resolvedUploadDir = path.resolve(uploadDir);
   await fs.mkdir(resolvedUploadDir, { recursive: true });

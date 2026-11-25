@@ -122,6 +122,10 @@ const envSchema = z.object({
     .default('./uploads')
     .transform((dir) => path.resolve(process.cwd(), dir)),
   TRUST_PROXY: z.coerce.number().int().min(0).max(10).optional().default(0),
+  IDENTITY_UPLOAD_DIR: z.string().trim().min(1).default('./private-identity')
+    .transform(dir => path.resolve(process.cwd(), dir)),
+  IDENTITY_ENCRYPTION_KEY: z.preprocess(value => value === '' ? undefined : value,
+    z.string().regex(/^[0-9a-fA-F]{64}$/, 'Use a 32-byte hex key').optional()),
 });
 
 /**

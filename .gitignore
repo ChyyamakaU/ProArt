@@ -1,9 +1,40 @@
+# Local configuration and key material. Only documented examples are shared.
 .env
-node_modules/
+.env.*
+!.env.example
+*.pem
+*.key
+*.p12
+*.pfx
+id_rsa
+id_ed25519
 
-.env.local
+# Runtime data, private uploads, database exports, and disposable demo runs.
+/backend/uploads/*
+!/backend/uploads/.gitkeep
+private-identity/
+private-uploads/
+identity-uploads/
+pgdata/
+postgres-data/
+database-dumps/
+backups/
+skillverify-investor-demo-*/
+skillverify-local-investor-demo.*
+*.dump
+*.backup
+*.bak
+*.sql.gz
+*.dump.sql
+*-dump.sql
+*.sqlite
+*.sqlite3
+
+# Dependencies, build output, caches and machine files.
+node_modules/
+dist/
+coverage/
+.vite/
+*.log
 __pycache__/
 .DS_Store
-
-backend/.env
-frontend/.env

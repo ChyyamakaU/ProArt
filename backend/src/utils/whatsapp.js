@@ -17,7 +17,7 @@ export function buildWhatsAppLinks(worker) {
 
   const hireMessage = [
     `Hello ${worker.full_name},`,
-    `I found your verified SkillVerify Trust Card for ${worker.trade} in ${worker.location}.`,
+    `I found your SkillVerify Trust Card for ${worker.trade} in ${worker.location}.`,
     'Are you available to discuss a job?',
   ].join(' ');
 

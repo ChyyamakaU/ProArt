@@ -1,4 +1,5 @@
 import assert from 'node:assert/strict';
+import { randomBytes } from 'node:crypto';
 import fs from 'node:fs/promises';
 import http from 'node:http';
 import os from 'node:os';
@@ -11,7 +12,7 @@ process.env.PORT = '4000';
 process.env.DATABASE_URL = 'postgres://test:test@localhost:5432/skillverify_test';
 process.env.ALLOWED_ORIGINS = 'https://skillverify.ng,http://localhost:5173';
 process.env.FRONTEND_URL = 'https://skillverify.ng';
-process.env.JWT_SECRET = 'test-only-super-secret-signing-key-at-least-32-chars-long';
+process.env.JWT_SECRET = randomBytes(32).toString('hex');
 process.env.JWT_EXPIRES_IN = '7d';
 
 const { createApp } = await import('../src/app.js');

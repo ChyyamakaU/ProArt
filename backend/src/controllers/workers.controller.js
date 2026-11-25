@@ -445,6 +445,14 @@ export function createWorkersController(deps = {}) {
         w.avatar_url,
         w.is_verified,
         w.created_at,
+        EXISTS (
+          SELECT 1 FROM identity_submissions i
+          WHERE i.worker_id = w.id AND i.status = 'verified' AND i.full_name = w.full_name
+        ) AS identity_approved,
+        EXISTS (
+          SELECT 1 FROM skill_submissions s
+          WHERE s.worker_id = w.id AND s.status = 'verified' AND s.trade = w.trade
+        ) AS skill_approved,
         COALESCE(rev.review_count, 0)::int AS review_count,
         rev.avg_rating
       FROM workers w
@@ -488,10 +496,13 @@ export function createWorkersController(deps = {}) {
     ]);
 
     res.status(200).json({
-      data: toPublicWorker(worker, {
-        workSamples: samplesResult.rows,
-        reviews: reviewsResult.rows,
-      }),
+      data: {
+        ...toPublicWorker(worker, { workSamples: samplesResult.rows, reviews: reviewsResult.rows }),
+        approved_verifications: {
+          ...(worker.identity_approved === true ? { identity: true } : {}),
+          ...(worker.skill_approved === true ? { skill: true } : {}),
+        },
+      },
     });
   }
 

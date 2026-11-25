@@ -6,7 +6,10 @@ import { errorHandler, notFoundHandler } from './middleware/errorHandler.js';
 import { apiRateLimiter } from './middleware/rateLimiter.js';
 import { createAuthRouter } from './routes/auth.routes.js';
 import { createWorkersRouter } from './routes/workers.routes.js';
+import { createSkillVerificationRouter } from './routes/skillVerification.routes.js';
+import { createIdentityVerificationRouter } from './routes/identityVerification.routes.js';
 import { AppError } from './utils/AppError.js';
+import { createIdentityStorage, protectPublicUploadRoot } from './utils/identityStorage.js';
 
 /**
  * Constructs a hardened Express application instance.
@@ -15,18 +18,26 @@ import { AppError } from './utils/AppError.js';
  * @param {{
  *   allowedOrigins?: string[],
  *   uploadDir?: string,
+ *   identityUploadDir?: string,
+ *   identityEncryptionKey?: string,
  *   trustProxy?: number,
  *   apiLimiter?: import('express').RequestHandler,
  *   writeLimiter?: import('express').RequestHandler,
  *   authLimiter?: import('express').RequestHandler,
  *   controller?: ReturnType<import('./controllers/workers.controller.js').createWorkersController>,
  *   authController?: ReturnType<import('./controllers/auth.controller.js').createAuthController>,
+ *   skillVerificationController?: ReturnType<import('./controllers/skillVerification.controller.js').createSkillVerificationController>,
  * }} [options]
  * @returns {import('express').Express}
  */
 export function createApp(options = {}) {
   const allowedOrigins = options.allowedOrigins ?? env.ALLOWED_ORIGINS;
   const uploadDir = options.uploadDir ?? env.UPLOAD_DIR;
+  const identityStorage = createIdentityStorage({
+    publicDir: uploadDir,
+    directory: options.identityUploadDir ?? env.IDENTITY_UPLOAD_DIR,
+    encryptionKey: options.identityEncryptionKey ?? env.IDENTITY_ENCRYPTION_KEY,
+  });
   const trustProxy = options.trustProxy ?? env.TRUST_PROXY;
   const generalLimiter = options.apiLimiter ?? apiRateLimiter;
 
@@ -104,6 +115,7 @@ export function createApp(options = {}) {
   // Serve verified work sample images safely with hardened headers.
   app.use(
     '/uploads',
+    protectPublicUploadRoot(uploadDir),
     express.static(uploadDir, {
       dotfiles: 'deny',
       etag: true,
@@ -139,6 +151,12 @@ export function createApp(options = {}) {
       writeLimiter: options.writeLimiter,
     }),
   );
+
+  app.use('/api', createSkillVerificationRouter({
+    controller: options.skillVerificationController,
+    writeLimiter: options.writeLimiter,
+  }));
+  app.use('/api', createIdentityVerificationRouter({ storage: identityStorage, writeLimiter: options.writeLimiter }));
 
   // Centralized 404 and error handling boundary.
   app.use(notFoundHandler);
