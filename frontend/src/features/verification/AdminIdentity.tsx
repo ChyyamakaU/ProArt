@@ -12,7 +12,7 @@ import { SkillBadge, SkillDate, SkillPagination } from './skillUi';
 
 export function AdminIdentity() {
   const session = useSession();
-  usePageMetadata('Identity review queue | ProArt', 'Review submitted identity documents.');
+  usePageMetadata('Identity review queue | Provart', 'Review submitted identity documents.');
   if (!session.signedIn) return <Navigate to="/login" replace />;
   if (!session.me) return <div className="shell account-page">{session.error
     ? <Feedback title="Couldn’t load your account" error

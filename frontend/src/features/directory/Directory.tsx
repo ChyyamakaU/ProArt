@@ -52,7 +52,7 @@ function SearchForm({ filters, onSearch, trades, locations, suggestionsUnavailab
 export function Directory() {
   const [params, setParams] = useSearchParams();
   const resultsHeading = useRef<HTMLHeadingElement>(null);
-  usePageMetadata('Worker directory | ProArt', 'Search ProArt’s public Trust Cards by name, trade, or location.');
+  usePageMetadata('Worker directory | Provart', 'Search Provart’s public Trust Cards by name, trade, or location.');
   const filters = {
     q: (params.get('q') ?? '').trim().slice(0, 100),
     trade: (params.get('trade') ?? '').trim().slice(0, 80),

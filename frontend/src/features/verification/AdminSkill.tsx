@@ -11,7 +11,7 @@ import { DecisionForm } from './ReviewDecision';
 
 export function AdminSkill() {
   const session = useSession();
-  usePageMetadata('Skill review queue | ProArt', 'Review Skill Verification evidence submitted by workers.');
+  usePageMetadata('Skill review queue | Provart', 'Review Skill Verification evidence submitted by workers.');
   if (!session.signedIn) return <Navigate to="/login" replace />;
   if (!session.me) return <div className="shell account-page">{session.error
     ? <Feedback title="Couldn’t load your account" error

@@ -21,7 +21,7 @@ export function Auth({ mode }: { mode: 'login' | 'register' }) {
   const [error, setError] = useState<unknown>();
   const joining = mode === 'register';
   const heading = joining ? 'Create your worker account' : 'Sign in';
-  usePageMetadata(heading + ' | ProArt', 'Access your ProArt worker account and manage your public Trust Card.');
+  usePageMetadata(heading + ' | Provart', 'Access your Provart worker account and manage your public Trust Card.');
   const { register, handleSubmit, formState: { errors, isSubmitting } } = useForm<Credentials>({
     resolver: zodResolver(joining ? registerSchema : loginSchema),
   });
@@ -45,7 +45,7 @@ export function Auth({ mode }: { mode: 'login' | 'register' }) {
   }
 
   return <div className="shell account-page auth-layout">
-    <aside className="auth-story" aria-label="About ProArt">
+    <aside className="auth-story" aria-label="About Provart">
       <div><p className="eyebrow">For skilled professionals</p>
         <p className="auth-story-headline">Your work deserves a professional identity.</p>
         <p>Give the next customer one place to see who you are, what you do, and which checks you’ve completed.</p></div>
@@ -56,9 +56,9 @@ export function Auth({ mode }: { mode: 'login' | 'register' }) {
       </ul>
     </aside>
     <section className="surface account-panel">
-      <p className="eyebrow">ProArt account</p>
+      <p className="eyebrow">Provart account</p>
       <h1>{heading}</h1>
-      <p className="account-intro">{joining ? 'Create an account to set up your public ProArt Trust Card.' : 'Use the phone number and password for your worker account.'}</p>
+      <p className="account-intro">{joining ? 'Create an account to set up your public Provart Trust Card.' : 'Use the phone number and password for your worker account.'}</p>
       {session.expired && <p className="notice" role="status">Your session ended. Sign in again to continue.</p>}
       <form className="account-form" onSubmit={handleSubmit(submit)} noValidate>
         <Field id="account-phone" label="Phone number" error={errors.phone?.message}>
@@ -72,7 +72,7 @@ export function Auth({ mode }: { mode: 'login' | 'register' }) {
           {isSubmitting ? (joining ? 'Creating account…' : 'Signing in…') : heading}
         </button>
       </form>
-      <p className="account-switch">{joining ? 'Already have an account?' : 'New to ProArt?'}{' '}
+      <p className="account-switch">{joining ? 'Already have an account?' : 'New to Provart?'}{' '}
         <Link className="text-link" to={joining ? '/login' : '/register'}>
           {joining ? 'Sign in' : 'Create an account'}
         </Link>

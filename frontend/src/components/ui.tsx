@@ -4,9 +4,9 @@ import { Link } from 'react-router-dom';
 import { mediaUrl } from '../lib/api';
 
 export function Brand() {
-  return <Link className="brand" to="/" aria-label="ProArt home">
+  return <Link className="brand" to="/" aria-label="Provart home">
     <span className="brand-symbol"><ShieldCheck size={21} aria-hidden="true" /></span>
-    <span>Pro<span className="brand-accent">Art</span></span>
+    <span>Prov<span className="brand-accent">art</span></span>
   </Link>;
 }
 
