@@ -1,3 +1,4 @@
+import { BriefcaseBusiness, Hammer } from 'lucide-react';
 import { Link } from 'react-router-dom';
 import { HomeImage } from './HomeImage';
 
@@ -15,7 +16,8 @@ export function AudienceSplit() {
           width={1200}
           height={1400}
           sizes="(min-width: 900px) 50vw, 100vw"
-          label="Add for-workers.webp"
+          icon={<Hammer aria-hidden="true" />}
+          placeholderClassName="audience-img"
         />
         <div className="audience-scrim" aria-hidden="true" />
         <div className="audience-copy">
@@ -36,7 +38,8 @@ export function AudienceSplit() {
           width={1200}
           height={1400}
           sizes="(min-width: 900px) 50vw, 100vw"
-          label="Add for-hirers.webp"
+          icon={<BriefcaseBusiness aria-hidden="true" />}
+          placeholderClassName="audience-img"
         />
         <div className="audience-scrim" aria-hidden="true" />
         <div className="audience-copy">

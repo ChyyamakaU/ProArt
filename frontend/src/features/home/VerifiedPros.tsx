@@ -1,4 +1,4 @@
-import { BadgeCheck, MessageCircle } from 'lucide-react';
+import { BadgeCheck, MessageCircle, UserRound } from 'lucide-react';
 import { Link } from 'react-router-dom';
 import { contactLink, mediaUrl, type Worker } from '../../lib/api';
 import { HomeImage } from './HomeImage';
@@ -38,7 +38,7 @@ export function VerifiedPros({ workers }: { workers: Worker[] }) {
                   width={720}
                   height={960}
                   sizes="(min-width: 1024px) 33vw, 320px"
-                  label={`Add worker-portrait-${(index % 3) + 1}.webp`}
+                  icon={<UserRound aria-hidden="true" />}
                 />
                 <div className="pro-tile-scrim" aria-hidden="true" />
                 <div className="pro-tile-body">

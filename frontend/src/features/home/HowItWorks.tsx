@@ -1,3 +1,4 @@
+import { Image } from 'lucide-react';
 import { HomeImage } from './HomeImage';
 
 const steps = [
@@ -19,7 +20,8 @@ export function HowItWorks() {
         width={1800}
         height={700}
         sizes="100vw"
-        label="Add how-it-works-panorama.webp"
+        icon={<Image aria-hidden="true" />}
+        placeholderClassName="how-bg"
       />
       <div className="how-overlay" aria-hidden="true" />
       <div className="how-inner">

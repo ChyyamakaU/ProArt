@@ -1,21 +1,8 @@
-import { useState, type FormEvent } from 'react';
-import { Link, useNavigate } from 'react-router-dom';
+import { ArrowRight, Image } from 'lucide-react';
+import { Link } from 'react-router-dom';
 import { HomeImage } from './HomeImage';
 
 export function HeroSection() {
-  const navigate = useNavigate();
-  const [trade, setTrade] = useState('');
-  const [location, setLocation] = useState('');
-
-  function onSubmit(event: FormEvent<HTMLFormElement>) {
-    event.preventDefault();
-    const params = new URLSearchParams();
-    if (trade.trim()) params.set('trade', trade.trim());
-    if (location.trim()) params.set('location', location.trim());
-    const query = params.toString();
-    void navigate(query ? `/workers?${query}` : '/workers');
-  }
-
   return (
     <section className="home-hero" aria-labelledby="home-hero-title">
       <div className="home-hero-media" aria-hidden="true">
@@ -30,7 +17,8 @@ export function HeroSection() {
           width={1600}
           height={1067}
           sizes="100vw"
-          label="Add hero-artisan.webp"
+          icon={<Image aria-hidden="true" />}
+          placeholderClassName="home-hero-img"
         />
         <div className="home-hero-scrim" />
       </div>
@@ -43,21 +31,12 @@ export function HeroSection() {
             ProVart gives skilled workers a public Trust Card with verified identity, reviewed work, and a direct way for clients to get in touch.
           </p>
 
-          <form className="hero-search" role="search" aria-label="Find professionals" onSubmit={onSubmit}>
-            <div className="hero-search-field">
-              <label htmlFor="hero-trade">Service</label>
-              <input id="hero-trade" name="trade" type="search" placeholder="Electrician, tailor..." value={trade} onChange={(e) => setTrade(e.target.value)} autoComplete="off" />
-            </div>
-            <div className="hero-search-field">
-              <label htmlFor="hero-location">Location</label>
-              <input id="hero-location" name="location" type="search" placeholder="Lagos, Abuja..." value={location} onChange={(e) => setLocation(e.target.value)} autoComplete="off" />
-            </div>
-            <button type="submit" className="hero-search-submit">Find pros</button>
-          </form>
-
-          <div className="hero-links">
-            <Link className="hero-text-link" to="/workers">Browse verified pros</Link>
-            <Link className="hero-text-link hero-text-link-muted" to="/register">I&apos;m a worker: create my free Trust Card</Link>
+          <div className="hero-actions">
+            <Link className="button primary" to="/workers">
+              Explore professionals
+              <ArrowRight size={18} aria-hidden="true" />
+            </Link>
+            <Link className="button secondary" to="/register">Get started</Link>
           </div>
         </div>
       </div>

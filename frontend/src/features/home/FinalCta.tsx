@@ -1,3 +1,4 @@
+import { Image } from 'lucide-react';
 import { Link } from 'react-router-dom';
 import { HomeImage } from './HomeImage';
 
@@ -14,7 +15,8 @@ export function FinalCta() {
         width={1600}
         height={900}
         sizes="100vw"
-        label="Add final-cta.webp"
+        icon={<Image aria-hidden="true" />}
+        placeholderClassName="final-cta-img"
       />
       <div className="final-cta-scrim" aria-hidden="true" />
       <div className="final-cta-inner">

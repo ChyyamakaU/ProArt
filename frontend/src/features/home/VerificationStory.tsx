@@ -1,4 +1,4 @@
-import { BadgeCheck, Check, Fingerprint, Phone } from 'lucide-react';
+import { BadgeCheck, Check, Fingerprint, Phone, Wrench } from 'lucide-react';
 import { HomeImage } from './HomeImage';
 
 const rows = [
@@ -9,7 +9,7 @@ const rows = [
     icon: Fingerprint,
     image: '/images/home/verify-identity.webp', // TODO: supply frontend/public/images/home/verify-identity.webp
     imageAlt: 'Artisan holding an identity document during verification',
-    imageLabel: 'Add verify-identity.webp',
+    placeholderIcon: <Fingerprint aria-hidden="true" />,
     live: true,
   },
   {
@@ -19,7 +19,7 @@ const rows = [
     icon: BadgeCheck,
     image: '/images/home/verify-skill.webp', // TODO: supply frontend/public/images/home/verify-skill.webp
     imageAlt: 'Close-up of hands doing skilled trade work',
-    imageLabel: 'Add verify-skill.webp',
+    placeholderIcon: <Wrench aria-hidden="true" />,
     live: true,
   },
   {
@@ -29,7 +29,7 @@ const rows = [
     icon: Phone,
     image: '/images/home/verify-contact.webp', // TODO: supply frontend/public/images/home/verify-contact.webp
     imageAlt: 'Worker holding a phone while managing client messages',
-    imageLabel: 'Add verify-contact.webp',
+    placeholderIcon: <Phone aria-hidden="true" />,
     live: false,
   },
 ];
@@ -55,9 +55,9 @@ export function VerificationStory() {
                 loading="lazy"
                 decoding="async"
                 width={1200}
-                height={1200}
+                height={900}
                 sizes="(min-width: 900px) 50vw, 100vw"
-                label={row.imageLabel}
+                icon={row.placeholderIcon}
               />
             </div>
             <div className="story-copy">

@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useState, type ReactNode } from 'react';
 
 type Props = {
   src: string;
@@ -11,33 +11,41 @@ type Props = {
   width?: number;
   height?: number;
   sizes?: string;
-  label: string;
+  icon?: ReactNode;
+  caption?: string;
 };
 
 export function HomeImage({
-  src, alt, className, placeholderClassName, loading = 'lazy', fetchPriority, decoding = 'async', width, height, sizes, label,
+  src, alt, className, placeholderClassName, loading = 'lazy', fetchPriority, decoding = 'async', width, height, sizes, icon, caption = 'Photo coming soon',
 }: Props) {
   const [failed, setFailed] = useState(false);
   if (failed) {
-    return <div
-      className={`photo-placeholder ${placeholderClassName ?? ''}`.trim()}
-      role={alt ? 'img' : undefined}
-      aria-label={alt || undefined}
-      aria-hidden={alt ? undefined : true}
-    >
-      <span className="photo-placeholder-label">{label}</span>
-    </div>;
+    return (
+      <div
+        className={`photo-placeholder ${placeholderClassName ?? ''}`.trim()}
+        role={alt ? 'img' : undefined}
+        aria-label={alt || undefined}
+        aria-hidden={alt ? undefined : true}
+      >
+        <div className="photo-placeholder-inner">
+          {icon ? <span className="photo-placeholder-icon" aria-hidden="true">{icon}</span> : null}
+          <span className="photo-placeholder-caption">{caption}</span>
+        </div>
+      </div>
+    );
   }
-  return <img
-    className={className}
-    src={src}
-    alt={alt}
-    loading={loading}
-    decoding={decoding}
-    fetchPriority={fetchPriority}
-    width={width}
-    height={height}
-    sizes={sizes}
-    onError={() => setFailed(true)}
-  />;
+  return (
+    <img
+      className={className}
+      src={src}
+      alt={alt}
+      loading={loading}
+      decoding={decoding}
+      fetchPriority={fetchPriority}
+      width={width}
+      height={height}
+      sizes={sizes}
+      onError={() => setFailed(true)}
+    />
+  );
 }
