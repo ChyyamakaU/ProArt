@@ -10,7 +10,7 @@ const local = {
 } as const;
 
 export const homeImages = {
-  hero: { src: '/images/home/hero-artisan.webp', fallback: local.technician, position: '62% center' },
+  hero: { src: '/images/home/hero-artisan.webp', fallback: local.technician, position: '70% 20%' },
   verifyIdentity: { src: '/images/home/verify-identity.webp', fallback: local.tailoring, position: 'center' },
   verifySkill: { src: '/images/home/verify-skill.webp', fallback: local.technician, position: 'center' },
   verifyContact: { src: '/images/home/verify-contact.webp', fallback: local.tailoring, position: 'center' },

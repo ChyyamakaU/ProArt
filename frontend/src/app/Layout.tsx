@@ -63,7 +63,7 @@ export function Layout() {
     <a className="skip-link" href="#main">Skip to content</a>
     <header className={`site-header ${isHome ? 'is-home' : ''} ${solidHeader ? 'is-scrolled' : ''} ${mobileOpen ? 'is-menu-open' : ''}`.trim()}>
       <div className="shell header-inner">
-        <Brand eager />
+        <Brand size="nav" eager />
         <nav aria-label="Main" className="desktop-nav">
           {navItems.map((item) => item.to ? (
             <NavLink key={item.key} to={item.to} end={item.end} className={item.variant === 'primary' ? 'nav-join' : undefined}>

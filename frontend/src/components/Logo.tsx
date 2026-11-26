@@ -1,7 +1,7 @@
-type LogoSize = 'sm' | 'md' | 'lg';
+type LogoSize = 'sm' | 'md' | 'lg' | 'nav';
 
-const heights: Record<LogoSize, number> = { sm: 32, md: 40, lg: 48 };
-const widths: Record<LogoSize, number> = { sm: 48, md: 60, lg: 72 };
+const heights: Record<LogoSize, number> = { sm: 32, md: 40, lg: 48, nav: 56 };
+const widths: Record<LogoSize, number> = { sm: 48, md: 60, lg: 72, nav: 84 };
 
 export function Logo({
   size = 'md',

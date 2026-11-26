@@ -33,7 +33,7 @@ export function Home() {
 
   return (
     <div className="home-page">
-      <HeroSection />
+      <HeroSection verifiedPros={workers.length > 0 && workers.length >= total ? verifiedPros : 0} proofLoading={profiles.isPending} />
       <ProofLine stats={stats} />
       <VerificationStory />
       <HowItWorks />

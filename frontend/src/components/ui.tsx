@@ -4,7 +4,7 @@ import { Link } from 'react-router-dom';
 import { mediaUrl } from '../lib/api';
 import { Logo } from './Logo';
 
-export function Brand({ size = 'md', eager = false }: { size?: 'sm' | 'md' | 'lg'; eager?: boolean }) {
+export function Brand({ size = 'md', eager = false }: { size?: 'sm' | 'md' | 'lg' | 'nav'; eager?: boolean }) {
   return <Link className="brand" to="/" aria-label="ProVart home">
     <Logo size={size} withWordmark={false} eager={eager} alt="" />
   </Link>;
