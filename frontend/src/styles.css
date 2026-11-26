@@ -65,11 +65,12 @@
     border-bottom-color: rgba(23,20,15,0.08);
   }
   .header-inner { @apply flex min-h-[72px] items-center justify-between gap-4; }
-  .brand { @apply inline-flex shrink-0 items-center gap-2.5 font-display text-[1.35rem] font-extrabold tracking-tight text-brand; }
+  .brand { @apply inline-flex shrink-0 items-center gap-2.5 font-display text-[1.35rem] font-extrabold tracking-tight text-brand; min-height: 44px; }
   .site-header.is-home:not(.is-scrolled) .brand { color: var(--color-ivory); }
-  .brand-mark { @apply grid size-9 place-items-center rounded-[10px] bg-brand text-ivory; }
-  .site-header.is-home:not(.is-scrolled) .brand-mark { background: rgba(245,241,232,0.14); color: var(--color-ivory); border: 1px solid rgba(245,241,232,0.2); }
-  .brand-word { color: inherit; }
+  .brand-logo { display: inline-flex; align-items: center; gap: 0.55rem; }
+  .brand-logo-img { display: block; height: auto; max-height: 40px; width: auto; object-fit: contain; }
+  .brand-logo-wordmark .brand-logo-img { max-height: 36px; }
+  .brand-wordmark { color: inherit; font-family: var(--font-display); font-size: 1.35rem; font-weight: 800; letter-spacing: -0.02em; }
   .brand-accent { color: var(--color-amber); }
   .site-header nav { @apply hidden md:flex items-center gap-1; }
   .site-header nav :is(a, button) {
@@ -111,7 +112,6 @@
   .footer-inner { @apply grid gap-10 py-12 md:grid-cols-[1.2fr_1fr_1fr_1fr]; }
   .footer-brand p { @apply mt-4 max-w-[28ch] text-sm leading-relaxed text-ivory/72; }
   .site-footer .brand { color: var(--color-ivory); }
-  .site-footer .brand-mark { background: rgba(245,241,232,0.12); color: var(--color-ivory); border: 1px solid rgba(245,241,232,0.12); }
   .footer-col h2 { font-family: var(--font-sans); font-size: 0.8rem; font-weight: 600; letter-spacing: 0.04em; text-transform: none; color: rgba(245,241,232,0.58); margin-bottom: 0.85rem; }
   .footer-col a, .footer-col p { display: flex; min-height: 44px; align-items: center; color: rgba(245,241,232,0.86); font-size: 0.95rem; text-decoration: none; }
   .footer-col a:hover { color: var(--color-ivory); }
@@ -281,6 +281,8 @@
   }
   .auth-back-home-mobile:hover { color: var(--color-brand); }
   @media (min-width: 768px) { .auth-back-home-mobile { display: none; } }
+  .auth-logo { margin-bottom: 0.25rem; }
+  .auth-logo .brand { min-height: 44px; }
   .auth-story .eyebrow { color: rgba(245,241,232,0.7); }
   .auth-story-headline { @apply mt-3 max-w-[16ch] font-display text-[clamp(1.9rem,4vw,3.3rem)] font-extrabold leading-[1.1] tracking-tight; }
   .auth-story p:not(.eyebrow, .auth-story-headline) { @apply mt-4 max-w-[47ch] leading-relaxed; color: rgba(245,241,232,0.8); }

@@ -1,12 +1,12 @@
-import { Eye, EyeOff, ImageOff, ShieldCheck } from 'lucide-react';
+import { Eye, EyeOff, ImageOff } from 'lucide-react';
 import { forwardRef, useRef, useState, type ComponentPropsWithoutRef, type ReactNode } from 'react';
 import { Link } from 'react-router-dom';
 import { mediaUrl } from '../lib/api';
+import { Logo } from './Logo';
 
-export function Brand() {
+export function Brand({ size = 'md', eager = false }: { size?: 'sm' | 'md' | 'lg'; eager?: boolean }) {
   return <Link className="brand" to="/" aria-label="ProVart home">
-    <span className="brand-mark" aria-hidden="true"><ShieldCheck size={20} strokeWidth={2.2} /></span>
-    <span className="brand-word">Pro<span className="brand-accent">Vart</span></span>
+    <Logo size={size} withWordmark={false} eager={eager} alt="" />
   </Link>;
 }
 

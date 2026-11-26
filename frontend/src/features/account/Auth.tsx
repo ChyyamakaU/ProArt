@@ -1,6 +1,6 @@
 import { zodResolver } from '@hookform/resolvers/zod';
 import { ArrowLeft, IdCard, Images, ShieldCheck } from 'lucide-react';
-import { PasswordInput } from '../../components/ui';
+import { Brand, PasswordInput } from '../../components/ui';
 import { useEffect, useRef, useState } from 'react';
 import { useForm } from 'react-hook-form';
 import { Link, Navigate } from 'react-router-dom';
@@ -58,6 +58,7 @@ export function Auth({ mode }: { mode: 'login' | 'register' }) {
       </ul>
     </aside>
     <section className="surface account-panel">
+      <div className="auth-logo"><Brand size="lg" eager /></div>
       <Link className="auth-back-home-mobile" to="/"><ArrowLeft size={16} aria-hidden="true" /> Back to home</Link>
       <p className="eyebrow">ProVart account</p>
       <h1>{heading}</h1>

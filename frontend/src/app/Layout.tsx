@@ -47,7 +47,7 @@ export function Layout() {
     <a className="skip-link" href="#main">Skip to content</a>
     <header className={`site-header ${isHome ? 'is-home' : ''} ${scrolled ? 'is-scrolled' : ''}`}>
       <div className="shell header-inner">
-        <Brand />
+        <Brand eager />
         <nav aria-label="Main navigation">
           <NavLink to="/workers">Professionals</NavLink>
           {session.signedIn ? <>
