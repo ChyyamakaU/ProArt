@@ -1,14 +1,18 @@
 import { BriefcaseBusiness, Hammer } from 'lucide-react';
 import { Link } from 'react-router-dom';
 import { HomeImage } from './HomeImage';
+import { homeImages } from './images';
 
 export function AudienceSplit() {
+  const workers = homeImages.forWorkers;
+  const hirers = homeImages.forHirers;
   return (
     <section className="audience-split" aria-label="For workers and hirers">
       <article className="audience-panel">
         {/* TODO: supply frontend/public/images/home/for-workers.webp - worker portrait/scene */}
         <HomeImage
-          src="/images/home/for-workers.webp"
+          src={workers.src}
+          fallback={workers.fallback}
           alt="A skilled worker in their workshop"
           className="audience-img"
           loading="lazy"
@@ -18,6 +22,7 @@ export function AudienceSplit() {
           sizes="(min-width: 900px) 50vw, 100vw"
           icon={<Hammer aria-hidden="true" />}
           placeholderClassName="audience-img"
+          objectPosition={workers.position}
         />
         <div className="audience-scrim" aria-hidden="true" />
         <div className="audience-copy">
@@ -30,7 +35,8 @@ export function AudienceSplit() {
       <article className="audience-panel">
         {/* TODO: supply frontend/public/images/home/for-hirers.webp - client/employer scene */}
         <HomeImage
-          src="/images/home/for-hirers.webp"
+          src={hirers.src}
+          fallback={hirers.fallback}
           alt="A client reviewing a professional's work"
           className="audience-img"
           loading="lazy"
@@ -40,6 +46,7 @@ export function AudienceSplit() {
           sizes="(min-width: 900px) 50vw, 100vw"
           icon={<BriefcaseBusiness aria-hidden="true" />}
           placeholderClassName="audience-img"
+          objectPosition={hirers.position}
         />
         <div className="audience-scrim" aria-hidden="true" />
         <div className="audience-copy">

@@ -1,13 +1,16 @@
 import { Image } from 'lucide-react';
 import { Link } from 'react-router-dom';
 import { HomeImage } from './HomeImage';
+import { homeImages } from './images';
 
 export function FinalCta() {
+  const slot = homeImages.finalCta;
   return (
     <section className="final-cta" aria-labelledby="final-cta-title">
       {/* TODO: supply frontend/public/images/home/final-cta.webp - closing artisan photo */}
       <HomeImage
-        src="/images/home/final-cta.webp"
+        src={slot.src}
+        fallback={slot.fallback}
         alt=""
         className="final-cta-img"
         loading="lazy"
@@ -17,6 +20,7 @@ export function FinalCta() {
         sizes="100vw"
         icon={<Image aria-hidden="true" />}
         placeholderClassName="final-cta-img"
+        objectPosition={slot.position}
       />
       <div className="final-cta-scrim" aria-hidden="true" />
       <div className="final-cta-inner">

@@ -8,6 +8,7 @@ export function Layout() {
   const navigate = useNavigate();
   const session = useSession();
   const isHome = pathname === '/';
+  const isAuth = pathname === '/login' || pathname === '/register';
   const [scrolled, setScrolled] = useState(false);
 
   useEffect(() => {
@@ -37,6 +38,10 @@ export function Layout() {
     : session.me?.worker === null && session.me?.user.role === 'worker'
       ? '/onboarding'
       : '/dashboard';
+
+  if (isAuth) {
+    return <main id="main" tabIndex={-1} className="auth-main"><Outlet /></main>;
+  }
 
   return <>
     <a className="skip-link" href="#main">Skip to content</a>

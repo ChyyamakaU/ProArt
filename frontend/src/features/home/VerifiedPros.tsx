@@ -2,12 +2,18 @@ import { BadgeCheck, MessageCircle, UserRound } from 'lucide-react';
 import { Link } from 'react-router-dom';
 import { contactLink, mediaUrl, type Worker } from '../../lib/api';
 import { HomeImage } from './HomeImage';
+import { homeImages } from './images';
+
+const portraitSlots = [homeImages.workerPortrait1, homeImages.workerPortrait2, homeImages.workerPortrait3];
 
 function workerPhoto(worker: Worker, index: number) {
-  const src = mediaUrl(worker.avatar_url) ?? mediaUrl(worker.work_samples[0]?.image_url ?? null);
-  // TODO: supply frontend/public/images/home/worker-portrait-1.webp, worker-portrait-2.webp, worker-portrait-3.webp for featured portrait fallbacks.
-  const fallback = `/images/home/worker-portrait-${(index % 3) + 1}.webp`;
-  return src ?? fallback;
+  const slot = portraitSlots[index % portraitSlots.length];
+  const real = mediaUrl(worker.avatar_url) ?? mediaUrl(worker.work_samples[0]?.image_url ?? null);
+  return {
+    src: real ?? slot.src,
+    fallback: slot.fallback,
+    position: slot.position,
+  };
 }
 
 export function VerifiedPros({ workers }: { workers: Worker[] }) {
@@ -27,10 +33,12 @@ export function VerifiedPros({ workers }: { workers: Worker[] }) {
             const verified = Boolean(worker.approved_verifications?.identity || worker.approved_verifications?.skill);
             const wa = contactLink(worker.whatsapp_links.hire_url);
             const photo = workerPhoto(worker, index);
+            // TODO: supply frontend/public/images/home/worker-portrait-1.webp, worker-portrait-2.webp, worker-portrait-3.webp
             return (
               <article className="pro-tile" key={worker.slug}>
                 <HomeImage
-                  src={photo}
+                  src={photo.src}
+                  fallback={photo.fallback}
                   alt={`${worker.full_name}, ${worker.trade} in ${worker.location}`}
                   className="pro-tile-img"
                   loading="lazy"
@@ -39,6 +47,7 @@ export function VerifiedPros({ workers }: { workers: Worker[] }) {
                   height={960}
                   sizes="(min-width: 1024px) 33vw, 320px"
                   icon={<UserRound aria-hidden="true" />}
+                  objectPosition={photo.position}
                 />
                 <div className="pro-tile-scrim" aria-hidden="true" />
                 <div className="pro-tile-body">

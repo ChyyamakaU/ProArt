@@ -1,14 +1,17 @@
 import { ArrowRight, Image } from 'lucide-react';
 import { Link } from 'react-router-dom';
 import { HomeImage } from './HomeImage';
+import { homeImages } from './images';
 
 export function HeroSection() {
+  const hero = homeImages.hero;
   return (
     <section className="home-hero" aria-labelledby="home-hero-title">
       <div className="home-hero-media" aria-hidden="true">
         {/* TODO: supply frontend/public/images/home/hero-artisan.webp - artisan at work, right-weighted composition */}
         <HomeImage
-          src="/images/home/hero-artisan.webp"
+          src={hero.src}
+          fallback={hero.fallback}
           alt=""
           className="home-hero-img reveal-hero-img"
           loading="eager"
@@ -19,6 +22,7 @@ export function HeroSection() {
           sizes="100vw"
           icon={<Image aria-hidden="true" />}
           placeholderClassName="home-hero-img"
+          objectPosition={hero.position}
         />
         <div className="home-hero-scrim" />
       </div>

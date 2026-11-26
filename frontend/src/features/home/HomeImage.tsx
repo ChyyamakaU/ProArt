@@ -2,6 +2,7 @@ import { useState, type ReactNode } from 'react';
 
 type Props = {
   src: string;
+  fallback?: string;
   alt: string;
   className?: string;
   placeholderClassName?: string;
@@ -13,13 +14,17 @@ type Props = {
   sizes?: string;
   icon?: ReactNode;
   caption?: string;
+  objectPosition?: string;
 };
 
 export function HomeImage({
-  src, alt, className, placeholderClassName, loading = 'lazy', fetchPriority, decoding = 'async', width, height, sizes, icon, caption = 'Photo coming soon',
+  src, fallback, alt, className, placeholderClassName, loading = 'lazy', fetchPriority, decoding = 'async', width, height, sizes, icon, caption = 'Photo coming soon', objectPosition,
 }: Props) {
-  const [failed, setFailed] = useState(false);
-  if (failed) {
+  const [failedPrimary, setFailedPrimary] = useState(false);
+  const [failedFallback, setFailedFallback] = useState(false);
+  const activeSrc = !failedPrimary ? src : (fallback && !failedFallback ? fallback : undefined);
+
+  if (!activeSrc) {
     return (
       <div
         className={`photo-placeholder ${placeholderClassName ?? ''}`.trim()}
@@ -34,10 +39,11 @@ export function HomeImage({
       </div>
     );
   }
+
   return (
     <img
       className={className}
-      src={src}
+      src={activeSrc}
       alt={alt}
       loading={loading}
       decoding={decoding}
@@ -45,7 +51,11 @@ export function HomeImage({
       width={width}
       height={height}
       sizes={sizes}
-      onError={() => setFailed(true)}
+      style={objectPosition ? { objectPosition } : undefined}
+      onError={() => {
+        if (!failedPrimary) setFailedPrimary(true);
+        else setFailedFallback(true);
+      }}
     />
   );
 }

@@ -1,5 +1,6 @@
 import { Image } from 'lucide-react';
 import { HomeImage } from './HomeImage';
+import { homeImages } from './images';
 
 const steps = [
   { title: 'Build your profile', description: 'Add your trade, location, experience, and photos of work you’ve completed.' },
@@ -8,11 +9,13 @@ const steps = [
 ];
 
 export function HowItWorks() {
+  const slot = homeImages.howItWorks;
   return (
     <section className="how-section" aria-labelledby="how-title">
       {/* TODO: supply frontend/public/images/home/how-it-works-panorama.webp - wide workshop/trades panoramic strip */}
       <HomeImage
-        src="/images/home/how-it-works-panorama.webp"
+        src={slot.src}
+        fallback={slot.fallback}
         alt=""
         className="how-bg"
         loading="lazy"
@@ -22,6 +25,7 @@ export function HowItWorks() {
         sizes="100vw"
         icon={<Image aria-hidden="true" />}
         placeholderClassName="how-bg"
+        objectPosition={slot.position}
       />
       <div className="how-overlay" aria-hidden="true" />
       <div className="how-inner">
