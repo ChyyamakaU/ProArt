@@ -2,6 +2,7 @@ import { Link, NavLink, Outlet, useLocation, useNavigate } from 'react-router-do
 import { useEffect, useState } from 'react';
 import { Brand } from '../components/ui';
 import { useSession } from '../features/account/session';
+import { MobileNav, type MobileNavItem } from './MobileNav';
 
 export function Layout() {
   const { pathname, hash } = useLocation();
@@ -10,6 +11,7 @@ export function Layout() {
   const isHome = pathname === '/';
   const isAuth = pathname === '/login' || pathname === '/register';
   const [scrolled, setScrolled] = useState(false);
+  const [mobileOpen, setMobileOpen] = useState(false);
 
   useEffect(() => {
     if (hash) {
@@ -43,21 +45,35 @@ export function Layout() {
     return <main id="main" tabIndex={-1} className="auth-main"><Outlet /></main>;
   }
 
+  const navItems: MobileNavItem[] = session.signedIn
+    ? [
+        { key: 'pros', label: 'Professionals', to: '/workers' },
+        { key: 'account', label: session.me?.user.role === 'admin' ? 'Reviews' : 'Dashboard', to: accountTo },
+        { key: 'signout', label: 'Sign out', onClick: () => { session.signOut(); void navigate('/login', { replace: true }); } },
+      ]
+    : [
+        { key: 'pros', label: 'Professionals', to: '/workers' },
+        { key: 'signin', label: 'Sign in', to: '/login' },
+        { key: 'join', label: 'Join ProVart', to: '/register', variant: 'primary' },
+      ];
+
+  const solidHeader = scrolled || mobileOpen;
+
   return <>
     <a className="skip-link" href="#main">Skip to content</a>
-    <header className={`site-header ${isHome ? 'is-home' : ''} ${scrolled ? 'is-scrolled' : ''}`}>
+    <header className={`site-header ${isHome ? 'is-home' : ''} ${solidHeader ? 'is-scrolled' : ''} ${mobileOpen ? 'is-menu-open' : ''}`.trim()}>
       <div className="shell header-inner">
         <Brand eager />
-        <nav aria-label="Main navigation">
-          <NavLink to="/workers">Professionals</NavLink>
-          {session.signedIn ? <>
-            <NavLink to={accountTo}>{session.me?.user.role === 'admin' ? 'Reviews' : 'Dashboard'}</NavLink>
-            <button type="button" onClick={() => { session.signOut(); void navigate('/login', { replace: true }); }}>Sign out</button>
-          </> : <>
-            <NavLink to="/login">Sign in</NavLink>
-            <NavLink className="nav-join" to="/register">Join ProVart</NavLink>
-          </>}
+        <nav aria-label="Main" className="desktop-nav">
+          {navItems.map((item) => item.to ? (
+            <NavLink key={item.key} to={item.to} end={item.end} className={item.variant === 'primary' ? 'nav-join' : undefined}>
+              {item.label}
+            </NavLink>
+          ) : (
+            <button key={item.key} type="button" onClick={item.onClick}>{item.label}</button>
+          ))}
         </nav>
+        <MobileNav items={navItems} solidHeader={isHome && !solidHeader ? false : true} onOpenChange={setMobileOpen} />
       </div>
     </header>
 
@@ -89,12 +105,5 @@ export function Layout() {
         <p>ProVart Trust Card for skilled professionals.</p>
       </div>
     </footer>
-
-    <nav className="mobile-nav" aria-label="Mobile navigation">
-      <Link className="mobile-nav-primary" to="/workers">Find a pro</Link>
-      {session.signedIn
-        ? <Link className="mobile-nav-secondary" to={accountTo}>{session.me?.user.role === 'admin' ? 'Reviews' : 'Dashboard'}</Link>
-        : <Link className="mobile-nav-secondary" to="/register">Join</Link>}
-    </nav>
   </>;
 }
