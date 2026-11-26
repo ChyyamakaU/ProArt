@@ -1,5 +1,6 @@
 import { zodResolver } from '@hookform/resolvers/zod';
-import { IdCard, Images, ShieldCheck } from 'lucide-react';
+import { ArrowLeft, IdCard, Images, ShieldCheck } from 'lucide-react';
+import { PasswordInput } from '../../components/ui';
 import { useEffect, useRef, useState } from 'react';
 import { useForm } from 'react-hook-form';
 import { Link, Navigate } from 'react-router-dom';
@@ -46,6 +47,7 @@ export function Auth({ mode }: { mode: 'login' | 'register' }) {
 
   return <div className="shell account-page auth-layout">
     <aside className="auth-story" aria-label="About ProVart">
+      <Link className="auth-back-home" to="/"><ArrowLeft size={18} aria-hidden="true" /> Back to home</Link>
       <div><p className="eyebrow">For skilled professionals</p>
         <p className="auth-story-headline">Your work deserves a professional identity.</p>
         <p>Give the next customer one place to see who you are, what you do, and which checks you’ve completed.</p></div>
@@ -56,6 +58,7 @@ export function Auth({ mode }: { mode: 'login' | 'register' }) {
       </ul>
     </aside>
     <section className="surface account-panel">
+      <Link className="auth-back-home-mobile" to="/"><ArrowLeft size={16} aria-hidden="true" /> Back to home</Link>
       <p className="eyebrow">ProVart account</p>
       <h1>{heading}</h1>
       <p className="account-intro">{joining ? 'Create an account to set up your public ProVart Trust Card.' : 'Use the phone number and password for your worker account.'}</p>
@@ -65,7 +68,7 @@ export function Auth({ mode }: { mode: 'login' | 'register' }) {
           {props => <input {...props} {...register('phone')} type="tel" autoComplete="username" maxLength={25} placeholder="e.g. 0803 123 4567" />}
         </Field>
         <Field id="account-password" label="Password" hint={joining ? 'Use at least 8 characters.' : undefined} error={errors.password?.message}>
-          {props => <input {...props} {...register('password')} type="password" autoComplete={joining ? 'new-password' : 'current-password'} maxLength={128} />}
+          {props => <PasswordInput {...props} {...register('password')} autoComplete={joining ? 'new-password' : 'current-password'} maxLength={128} />}
         </Field>
         {Boolean(error) && <p className="notice error-notice" role="alert">{describeApiError(error)}</p>}
         <button className="button primary" disabled={isSubmitting} type="submit">

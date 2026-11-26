@@ -1,5 +1,5 @@
-import { ImageOff, ShieldCheck } from 'lucide-react';
-import { useState, type ReactNode } from 'react';
+import { Eye, EyeOff, ImageOff, ShieldCheck } from 'lucide-react';
+import { forwardRef, useRef, useState, type ComponentPropsWithoutRef, type ReactNode } from 'react';
 import { Link } from 'react-router-dom';
 import { mediaUrl } from '../lib/api';
 
@@ -42,3 +42,53 @@ export function Loading({ label, cards = 1 }: { label: string; cards?: number })
     {Array.from({ length: cards }, (_, index) => <div className="skeleton" key={index} aria-hidden="true"><span /><span /><span /></div>)}
   </div>;
 }
+
+type PasswordInputProps = Omit<ComponentPropsWithoutRef<'input'>, 'type'>;
+
+export const PasswordInput = forwardRef<HTMLInputElement, PasswordInputProps>(function PasswordInput(
+  { className, id, ...props }, forwardedRef,
+) {
+  const [visible, setVisible] = useState(false);
+  const inputRef = useRef<HTMLInputElement | null>(null);
+
+  function setRefs(node: HTMLInputElement | null) {
+    inputRef.current = node;
+    if (typeof forwardedRef === 'function') forwardedRef(node);
+    else if (forwardedRef) forwardedRef.current = node;
+  }
+
+  return (
+    <div className="password-input-wrap">
+      <input
+        {...props}
+        ref={setRefs}
+        id={id}
+        type={visible ? 'text' : 'password'}
+        className={`password-input ${className ?? ''}`.trim()}
+      />
+      <button
+        type="button"
+        className="password-toggle"
+        aria-label={visible ? 'Hide password' : 'Show password'}
+        aria-pressed={visible}
+        aria-controls={id}
+        onMouseDown={(e) => e.preventDefault()}
+        onClick={() => {
+          const input = inputRef.current;
+          const start = input?.selectionStart;
+          const end = input?.selectionEnd;
+          setVisible((v) => !v);
+          requestAnimationFrame(() => {
+            if (!input) return;
+            input.focus();
+            if (start !== null && start !== undefined && end !== null && end !== undefined) {
+              input.setSelectionRange(start, end);
+            }
+          });
+        }}
+      >
+        {visible ? <EyeOff size={20} aria-hidden="true" /> : <Eye size={20} aria-hidden="true" />}
+      </button>
+    </div>
+  );
+});
