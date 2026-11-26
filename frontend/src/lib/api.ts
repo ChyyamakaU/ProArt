@@ -264,8 +264,8 @@ export function describeApiError(error: unknown) {
   if (code === 'IDENTITY_STORAGE_UNAVAILABLE') return 'Identity documents are temporarily unavailable.';
   if (code === 'IDENTITY_DOCUMENT_REVIEW_REQUIRED') return 'Open and inspect the document before approving this submission.';
   if (code === 'INVALID_IDENTITY_IMAGE' || code === 'MIME_MISMATCH') return 'Choose a readable JPEG, PNG, or WebP image.';
-  if (status === 'connection') return 'The ProArt service could not be reached. Check your connection and try again.';
-  if (status === 503 || status === 502 || status === 504) return 'The ProArt service is temporarily unavailable. Try again in a moment.';
+  if (status === 'connection') return 'The ProVart service could not be reached. Check your connection and try again.';
+  if (status === 503 || status === 502 || status === 504) return 'The ProVart service is temporarily unavailable. Try again in a moment.';
   if (status === 429) return 'Too many requests. Wait a few minutes before trying again.';
   if (status === 400) return 'The service could not accept this request. Check the information you entered and try again.';
   if (status === 401 || status === 403) return 'The service denied access to this request.';
@@ -295,7 +295,7 @@ export function contactLink(raw: string) {
     const url = new URL(raw);
     if (url.origin !== 'https://wa.me' || !/^\/\d{10,15}$/.test(url.pathname)) return undefined;
     // Use the public WhatsApp destination with neutral copy.
-    return 'https://wa.me' + url.pathname + '?text=' + encodeURIComponent('Hello, I found your profile on ProArt and would like to get in touch.');
+    return 'https://wa.me' + url.pathname + '?text=' + encodeURIComponent('Hello, I found your profile on ProVart and would like to get in touch.');
   } catch {
     return undefined;
   }
